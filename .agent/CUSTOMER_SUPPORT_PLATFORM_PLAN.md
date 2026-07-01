@@ -394,10 +394,10 @@ Treat the widget as a standalone product with its own roadmap:
 
 **Exit criteria:** No production code, but the foundation is solid and the event bus is wired in.
 
-- [ ] Monorepo setup (pnpm workspaces + uv for Python).
-- [ ] Tooling: ruff, mypy, eslint, prettier, pre-commit.
-- [ ] Docker Compose: Postgres, Redis, Qdrant, MinIO, Langfuse.
-- [ ] Define all core interfaces:
+- [x] Monorepo setup (pnpm workspaces + uv for Python).
+- [x] Tooling: ruff, mypy, eslint, prettier, pre-commit.
+- [x] Docker Compose: Postgres, Redis, Qdrant, MinIO, Langfuse.
+- [x] Define all core interfaces:
   - `LLMProvider`
   - `EmbeddingProvider`
   - `VectorStore`
@@ -406,11 +406,11 @@ Treat the widget as a standalone product with its own roadmap:
   - `MemoryProvider`
   - `CacheProvider`
   - `EventBus`
-- [ ] One working adapter per interface (OpenAI, Qdrant, Redis, PDF, MCP).
-- [ ] Tenant schema in Postgres + RLS policies.
-- [ ] **Redis Streams event bus** running with event catalog drafted.
-- [ ] CI pipeline: lint + type-check + test.
-- [ ] `.env.example` + secrets management.
+- [x] One working adapter per interface (OpenAI, Qdrant, Redis, PDF, MCP).
+- [x] Tenant schema in Postgres + RLS policies.
+- [x] **Redis Streams event bus** running with event catalog drafted.
+- [x] CI pipeline: lint + type-check + test.
+- [x] `.env.example` + secrets management.
 
 ---
 
