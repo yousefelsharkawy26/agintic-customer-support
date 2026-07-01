@@ -45,7 +45,7 @@ class LLMProvider(ABC):
     ) -> LLMResponse: ...
 
     @abstractmethod
-    async def generate_stream(
+    def generate_stream(
         self, messages: list[LLMMessage], config: LLMConfig | None = None
     ) -> AsyncIterator[str]: ...
 
@@ -130,7 +130,7 @@ class DocumentLoader(ABC):
     async def load(self, source: str) -> list[Document]: ...
 
     @abstractmethod
-    async def load_stream(self, source: str) -> AsyncIterator[Document]: ...
+    def load_stream(self, source: str) -> AsyncIterator[Document]: ...
 
 
 @dataclass
