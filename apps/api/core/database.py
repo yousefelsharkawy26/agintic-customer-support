@@ -1,6 +1,5 @@
 from collections.abc import AsyncIterator
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from apps.api.core.config import settings
@@ -14,15 +13,6 @@ engine = create_async_engine(
     pool_pre_ping=settings.db_pool_pre_ping,
 )
 async_session_factory = async_sessionmaker(engine, expire_on_commit=False)
-
-
-async def check_db_connection() -> bool:
-    try:
-        async with async_session_factory() as session:
-            await session.execute(select(1))
-        return True
-    except Exception:
-        return False
 
 
 async def get_db() -> AsyncIterator[AsyncSession]:

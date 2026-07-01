@@ -1,15 +1,18 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 import structlog
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.api.auth.deps import get_current_tenant
 from apps.api.core.database import get_db
 from apps.api.widget.models import OfflineMessage, WidgetSession
+from apps.api.widget.models_ext import WidgetEvent, WidgetSettings
 
 logger = structlog.get_logger()
 
@@ -33,6 +36,26 @@ class OfflineMessageCreate(BaseModel):
 
 class WidgetSessionUpdate(BaseModel):
     locale: str | None = None
+
+
+class WidgetSettingsUpdate(BaseModel):
+    primary_color: str | None = None
+    position: str | None = None
+    title: str | None = None
+    greeting: str | None = None
+    locale: str | None = None
+    brand_logo_url: str | None = None
+    custom_css: str | None = None
+    show_branding: bool | None = None
+    is_active: bool | None = None
+
+
+class AnalyticsEventCreate(BaseModel):
+    tenant_id: str
+    session_id: str
+    visitor_id: str
+    event_type: str
+    metadata: dict[str, object] | None = None
 
 
 @router.post("/sessions/start")
@@ -134,3 +157,183 @@ async def get_offline_messages(
         }
         for m in msgs
     ]
+
+
+# ── Widget Customization (public read, admin write) ──
+
+
+@router.get("/settings/{tenant_id}")
+async def get_widget_settings(tenant_id: str, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+    result = await db.execute(select(WidgetSettings).where(WidgetSettings.tenant_id == tenant_id))
+    settings = result.scalar_one_or_none()
+    if not settings:
+        return {
+            "tenant_id": tenant_id,
+            "primary_color": "#2563eb",
+            "position": "bottom-right",
+            "title": "Support",
+            "greeting": "Hi! How can I help you today?",
+            "locale": "en",
+            "brand_logo_url": None,
+            "custom_css": None,
+            "show_branding": True,
+            "is_active": True,
+        }
+    return {
+        "tenant_id": settings.tenant_id,
+        "primary_color": settings.primary_color,
+        "position": settings.position,
+        "title": settings.title,
+        "greeting": settings.greeting,
+        "locale": settings.locale,
+        "brand_logo_url": settings.brand_logo_url,
+        "custom_css": settings.custom_css,
+        "show_branding": settings.show_branding,
+        "is_active": settings.is_active,
+    }
+
+
+@router.put("/settings/{tenant_id}")
+async def update_widget_settings(
+    tenant_id: str,
+    body: WidgetSettingsUpdate,
+    db: AsyncSession = Depends(get_db),
+    tenant: dict[str, Any] = Depends(get_current_tenant),
+) -> dict[str, Any]:
+    if tenant["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Tenant mismatch")
+    result = await db.execute(select(WidgetSettings).where(WidgetSettings.tenant_id == tenant_id))
+    settings = result.scalar_one_or_none()
+    if not settings:
+        settings = WidgetSettings(tenant_id=tenant_id)
+        db.add(settings)
+    update_data = body.model_dump(exclude_none=True)
+    for field, value in update_data.items():
+        setattr(settings, field, value)
+    await db.commit()
+    await db.refresh(settings)
+    return _settings_to_dict(settings)
+
+
+def _settings_to_dict(s: WidgetSettings) -> dict[str, Any]:
+    return {
+        "tenant_id": s.tenant_id,
+        "primary_color": s.primary_color,
+        "position": s.position,
+        "title": s.title,
+        "greeting": s.greeting,
+        "locale": s.locale,
+        "brand_logo_url": s.brand_logo_url,
+        "custom_css": s.custom_css,
+        "show_branding": s.show_branding,
+        "is_active": s.is_active,
+        "created_at": s.created_at.isoformat(),
+        "updated_at": s.updated_at.isoformat(),
+    }
+
+
+# ── Widget Analytics ──
+
+
+@router.post("/analytics/event")
+async def record_analytics_event(
+    body: AnalyticsEventCreate, db: AsyncSession = Depends(get_db)
+) -> dict[str, str]:
+    event = WidgetEvent(
+        tenant_id=body.tenant_id,
+        session_id=body.session_id,
+        visitor_id=body.visitor_id,
+        event_type=body.event_type,
+        metadata_=body.metadata,
+    )
+    db.add(event)
+    await db.commit()
+    return {"status": "recorded"}
+
+
+@router.get("/analytics/{tenant_id}")
+async def get_widget_analytics(
+    tenant_id: str,
+    db: AsyncSession = Depends(get_db),
+    tenant: dict[str, Any] = Depends(get_current_tenant),
+    event_type: str | None = Query(None),
+    since: str | None = Query(None),
+) -> dict[str, Any]:
+    if tenant["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Tenant mismatch")
+    query = select(WidgetEvent).where(WidgetEvent.tenant_id == tenant_id)
+    if event_type:
+        query = query.where(WidgetEvent.event_type == event_type)
+    if since:
+        try:
+            since_dt = datetime.fromisoformat(since)
+            query = query.where(WidgetEvent.created_at >= since_dt)
+        except ValueError:
+            pass
+    query = query.order_by(WidgetEvent.created_at.desc()).limit(1000)
+    result = await db.execute(query)
+    events = result.scalars().all()
+
+    total = await db.execute(
+        select(func.count(WidgetEvent.id)).where(WidgetEvent.tenant_id == tenant_id)
+    )
+    total_count = total.scalar() or 0
+
+    counts: dict[str, int] = {}
+    for ev in events:
+        counts[ev.event_type] = counts.get(ev.event_type, 0) + 1
+
+    return {
+        "total_events": total_count,
+        "events": [
+            {
+                "id": e.id,
+                "session_id": e.session_id,
+                "visitor_id": e.visitor_id,
+                "event_type": e.event_type,
+                "metadata": e.metadata_,
+                "created_at": e.created_at.isoformat(),
+            }
+            for e in events
+        ],
+        "breakdown": counts,
+    }
+
+
+@router.get("/analytics/{tenant_id}/satisfaction")
+async def get_satisfaction_summary(
+    tenant_id: str,
+    db: AsyncSession = Depends(get_db),
+    tenant: dict[str, Any] = Depends(get_current_tenant),
+) -> dict[str, Any]:
+    if tenant["tenant_id"] != tenant_id:
+        raise HTTPException(status_code=403, detail="Tenant mismatch")
+    result = await db.execute(
+        select(WidgetEvent)
+        .where(
+            WidgetEvent.tenant_id == tenant_id,
+            WidgetEvent.event_type == "satisfaction_rating",
+        )
+        .order_by(WidgetEvent.created_at.desc())
+        .limit(1000)
+    )
+    ratings = result.scalars().all()
+    if not ratings:
+        return {"total": 0, "average": 0.0, "distribution": {}}
+
+    distribution: dict[str, int] = {}
+    total_score = 0.0
+    for r in ratings:
+        raw = 0.0
+        if r.metadata_ and "score" in r.metadata_:
+            val = r.metadata_["score"]
+            if isinstance(val, int | float):
+                raw = float(val)
+        label = str(raw)
+        total_score += raw
+        distribution[label] = distribution.get(label, 0) + 1
+    return {
+        "total": len(ratings),
+        "average": round(total_score / len(ratings), 2),
+        "distribution": distribution,
+    }

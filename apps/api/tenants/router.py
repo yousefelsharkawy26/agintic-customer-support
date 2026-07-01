@@ -15,6 +15,7 @@ import apps.api.rag.models  # noqa: F401
 import apps.api.tenants.models_ext  # noqa: F401
 import apps.api.tools.models  # noqa: F401
 import apps.api.widget.models  # noqa: F401
+import apps.api.widget.models_ext  # noqa: F401
 from apps.api.auth.deps import get_current_tenant, verify_tenant_access
 from apps.api.core.database import engine, get_db
 from apps.api.tenants.models import Base, Tenant
