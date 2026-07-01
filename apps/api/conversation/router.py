@@ -50,7 +50,7 @@ class ChatResponse(BaseModel):
     citations: list[str] = []
 
 
-@router.post("/chat")
+@router.post("/chat", response_model=None)
 async def chat(
     body: ChatRequest,
     db: AsyncSession = Depends(get_db),

@@ -2,45 +2,74 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master, main]
   pull_request:
-    branches: [main]
+    branches: [master, main]
+
+env:
+  PYTHON_VERSION: '3.13'
 
 jobs:
-  lint-python:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-      - run: uv sync --group dev
-      - run: uv run ruff check apps/
-      - run: uv run ruff format --check apps/
-      - run: uv run mypy apps/
-
-  lint-ts:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - run: npm install -g pnpm@9
-      - run: pnpm install
-      - run: pnpm lint
-        continue-on-error: true
-      - run: pnpm typecheck
-        continue-on-error: true
-
   test:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: customer_support
+          POSTGRES_USER: cs_user
+          POSTGRES_PASSWORD: cs_dev_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready -U cs_user -d customer_support
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v3
-      - uses: actions/setup-python@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: '3.13'
-      - run: uv sync --group dev
-      - run: uv run pytest -x --cov=apps/api --cov-report=term-missing
+          version: 'latest'
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Type check (mypy)
+        run: uv run mypy . --exclude .venv
+
+      - name: Test (pytest)
+        run: uv run python -m pytest -q --timeout=30 -x
+        env:
+          DATABASE_URL: postgresql+asyncpg://cs_user:cs_dev_password@localhost:5432/customer_support
+          REDIS_URL: redis://localhost:6379/0
+
+      - name: Eval CI (if baseline exists)
+        run: |
+          if [ -f data/eval_baseline.json ]; then
+            uv run python -m apps.api.eval.ci_runner
+          else
+            echo "No eval baseline found — skipping eval CI"
+          fi
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

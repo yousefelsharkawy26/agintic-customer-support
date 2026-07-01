@@ -1,9 +1,11 @@
+import uuid
+
 import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.conversation.models import Conversation, Message
-from apps.api.core.adapters import RedisCacheProvider
+from apps.api.core.adapters import ResilientCacheProvider
 from apps.api.core.config import settings
 from apps.api.core.interfaces import LLMMessage, MessageRole
 
@@ -12,12 +14,12 @@ logger = structlog.get_logger()
 
 class ConversationManager:
     def __init__(self) -> None:
-        self._cache = RedisCacheProvider(settings.redis_url)
+        self._cache = ResilientCacheProvider(settings.redis_url)
 
     async def create_conversation(
         self, db: AsyncSession, tenant_id: str, user_id: str | None = None
     ) -> Conversation:
-        conv = Conversation(tenant_id=tenant_id, user_id=user_id)
+        conv = Conversation(id=str(uuid.uuid4()), tenant_id=tenant_id, user_id=user_id)
         db.add(conv)
         await db.flush()
         cache_key = self._conv_cache_key(conv.id)

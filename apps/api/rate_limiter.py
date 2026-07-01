@@ -5,7 +5,7 @@ import structlog
 from fastapi import HTTPException, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from apps.api.core.adapters.redis_cache import RedisCacheProvider
+from apps.api.core.adapters import ResilientCacheProvider
 from apps.api.core.config import settings
 
 logger = structlog.get_logger()
@@ -14,7 +14,7 @@ logger = structlog.get_logger()
 class RateLimiterMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: Any, max_requests: int = 60, window_seconds: int = 60) -> None:
         super().__init__(app)
-        self._cache = RedisCacheProvider(settings.redis_url)
+        self._cache = ResilientCacheProvider(settings.redis_url)
         self._max_requests = max_requests
         self._window = window_seconds
 
