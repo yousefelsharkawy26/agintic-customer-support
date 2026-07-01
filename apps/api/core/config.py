@@ -31,6 +31,18 @@ class Settings(BaseSettings):
     cors_origins: str = "*"
     worker_count: int = 4
 
+    db_pool_size: int = 10
+    db_max_overflow: int = 20
+    db_pool_timeout: int = 30
+    db_pool_pre_ping: bool = True
+
+    redis_pool_size: int = 20
+    redis_socket_keepalive: bool = True
+    redis_socket_connect_timeout: int = 5
+
+    rate_limit_max: int = 60
+    rate_limit_window: int = 60
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
 

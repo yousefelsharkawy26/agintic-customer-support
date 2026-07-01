@@ -3,12 +3,19 @@ from typing import Any
 
 import redis.asyncio as aioredis  # type: ignore[import-untyped]
 
+from apps.api.core.config import settings
 from apps.api.core.interfaces import CacheProvider
 
 
 class RedisCacheProvider(CacheProvider):
     def __init__(self, redis_url: str, tenant_prefix: str = "") -> None:
-        self._redis = aioredis.from_url(redis_url, decode_responses=False)
+        self._redis = aioredis.from_url(
+            redis_url,
+            decode_responses=False,
+            max_connections=settings.redis_pool_size,
+            socket_keepalive=settings.redis_socket_keepalive,
+            socket_connect_timeout=settings.redis_socket_connect_timeout,
+        )
         self._tenant_prefix = f"{tenant_prefix}:" if tenant_prefix else ""
 
     def _key(self, key: str) -> str:

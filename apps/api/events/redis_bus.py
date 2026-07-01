@@ -5,12 +5,19 @@ from contextlib import suppress
 
 import redis.asyncio as aioredis  # type: ignore[import-untyped]
 
+from apps.api.core.config import settings
 from apps.api.core.interfaces import Event, EventBus
 
 
 class RedisStreamEventBus(EventBus):
     def __init__(self, redis_url: str, stream_maxlen: int = 10000) -> None:
-        self._redis = aioredis.from_url(redis_url, decode_responses=True)
+        self._redis = aioredis.from_url(
+            redis_url,
+            decode_responses=True,
+            max_connections=settings.redis_pool_size,
+            socket_keepalive=settings.redis_socket_keepalive,
+            socket_connect_timeout=settings.redis_socket_connect_timeout,
+        )
         self._stream_maxlen = stream_maxlen
         self._handlers: dict[str, list[Callable[[Event], Awaitable[None]]]] = {}
 

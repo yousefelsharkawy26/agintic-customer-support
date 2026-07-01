@@ -33,6 +33,52 @@ ps:
 	docker compose ps
 
 
+# ── Terraform ──
+
+TF_DIR := infra/terraform
+
+tf-init:
+	terraform -chdir=$(TF_DIR) init
+
+tf-plan:
+	terraform -chdir=$(TF_DIR) plan
+
+tf-apply:
+	terraform -chdir=$(TF_DIR) apply
+
+tf-destroy:
+	terraform -chdir=$(TF_DIR) destroy
+
+tf-fmt:
+	terraform -chdir=$(TF_DIR) fmt -recursive
+
+tf-validate:
+	terraform -chdir=$(TF_DIR) validate
+
+tf-output:
+	terraform -chdir=$(TF_DIR) output
+
+
+# ── Load Testing (k6) ──
+
+k6-smoke:
+	k6 run tests/load/smoke.js
+
+k6-health:
+	k6 run tests/load/health.js
+
+k6-chat:
+	k6 run tests/load/chat.js
+
+k6-tenants:
+	k6 run tests/load/tenants.js
+
+k6-webhooks:
+	k6 run tests/load/webhooks.js
+
+k6-all: k6-health k6-chat k6-tenants k6-webhooks
+
+
 # ── Maintenance ──
 
 clean:

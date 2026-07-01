@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from apps.api.auth.router import router as auth_router
 from apps.api.conversation.router import router as chat_router
 from apps.api.core.config import configure_logging, settings
+from apps.api.core.database import check_db_connection
 from apps.api.events.redis_bus import RedisStreamEventBus
 from apps.api.events.subscribers import register_subscribers
 from apps.api.monitoring.router import router as monitoring_router
@@ -17,10 +18,21 @@ from apps.api.rag.router import router as rag_router
 from apps.api.rate_limiter import RateLimiterMiddleware
 from apps.api.tenants.router import router as tenants_router
 from apps.api.tools.router import router as tools_router
-from apps.api.tools.webhooks import router as webhooks_router
+from apps.api.tools.webhooks import router as tool_webhooks_router
+from apps.api.webhooks.router import router as webhooks_router
+from apps.api.webhooks.subscriber import register_webhook_subscribers
 from apps.api.widget.router import router as widget_router
 
 logger = structlog.get_logger()
+
+
+async def warm_cache() -> None:
+    logger.info("cache_warmup_started")
+    try:
+        db_ok = await check_db_connection()
+        logger.info("cache_warmup_db_check", ok=db_ok)
+    except Exception as exc:
+        logger.warning("cache_warmup_failed", exc=str(exc))
 
 
 @asynccontextmanager
@@ -29,10 +41,12 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         bus = RedisStreamEventBus(settings.redis_url)
         await register_subscribers(bus)
+        await register_webhook_subscribers(bus)
         app.state.event_bus = bus
     except Exception:
         logger.warning("event_bus_unavailable", exc_info=True)
         app.state.event_bus = None
+    await warm_cache()
     logger.info("app_starting", app_name=settings.app_name)
     yield
     logger.info("app_stopping")
@@ -52,6 +66,7 @@ app.include_router(rag_router)
 app.include_router(tenants_router)
 app.include_router(monitoring_router)
 app.include_router(tools_router)
+app.include_router(tool_webhooks_router)
 app.include_router(webhooks_router)
 app.include_router(widget_router)
 
