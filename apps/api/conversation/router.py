@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.agent.interfaces import AgentContext
 from apps.api.agent.pipeline import AgentPipeline
+from apps.api.auth.deps import get_current_tenant, verify_tenant_access
 from apps.api.conversation.manager import ConversationManager
 from apps.api.core.database import get_db
 from apps.api.core.interfaces import LLMConfig, LLMMessage, LLMProvider, MessageRole
@@ -22,7 +23,7 @@ from apps.api.rag.semantic_cache import SemanticCache
 
 logger = structlog.get_logger()
 
-router = APIRouter(prefix="/api/v1", tags=["chat"])
+router = APIRouter(prefix="/api/v1", tags=["chat"], dependencies=[Depends(get_current_tenant)])
 
 _semantic_cache: SemanticCache | None = None
 _agent_pipeline: AgentPipeline | None = None
@@ -54,6 +55,7 @@ class ChatResponse(BaseModel):
 async def chat(
     body: ChatRequest,
     db: AsyncSession = Depends(get_db),
+    tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> StreamingResponse | ChatResponse:
     guardrail_result = run_input_guardrails(body.message)
     if not guardrail_result.passed:
@@ -66,7 +68,8 @@ async def chat(
 
     mgr = ConversationManager()
     rag = RAGPipeline()
-    tenant_id = body.tenant_id or "default"
+    tenant_id = body.tenant_id or tenant["tenant_id"]
+    verify_tenant_access(tenant_id, tenant)
 
     if body.conversation_id:
         conv = await mgr.get_conversation(db, body.conversation_id)
@@ -164,11 +167,15 @@ async def _stream_response(
             model=llm.__class__.__name__,
             token_count=token_count,
         )
-        yield f"data: {json.dumps({
-            'type': 'done',
-            'conversation_id': conv_id,
-            'citations': citations,
-        })}\n\n"
+        yield f"data: {
+            json.dumps(
+                {
+                    'type': 'done',
+                    'conversation_id': conv_id,
+                    'citations': citations,
+                }
+            )
+        }\n\n"
 
 
 @router.get("/conversations/{conversation_id}")

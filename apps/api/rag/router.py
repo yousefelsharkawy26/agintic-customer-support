@@ -6,13 +6,16 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.api.auth.deps import get_current_tenant, verify_tenant_access
 from apps.api.core.database import get_db
 from apps.api.rag.models import IndexedDocument
 from apps.api.rag.pipeline import RAGPipeline
 
 logger = structlog.get_logger()
 
-router = APIRouter(prefix="/api/v1/documents", tags=["rag"])
+router = APIRouter(
+    prefix="/api/v1/documents", tags=["rag"], dependencies=[Depends(get_current_tenant)]
+)
 
 
 class DocumentIngestRequest(BaseModel):
@@ -35,7 +38,9 @@ class DocumentResponse(BaseModel):
 async def ingest_document(
     body: DocumentIngestRequest,
     db: AsyncSession = Depends(get_db),
+    tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> dict[str, Any]:
+    verify_tenant_access(body.tenant_id, tenant)
     pipeline = RAGPipeline()
     chunk_count = await pipeline.index_document(
         db=db,

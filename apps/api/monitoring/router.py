@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.api.auth.deps import get_current_tenant, verify_tenant_access
 from apps.api.core.database import get_db
 from apps.api.monitoring.alerts import evaluate_alerts
 from apps.api.monitoring.cost_tracker import get_tenant_costs, record_usage
@@ -15,7 +16,9 @@ from apps.api.monitoring.models import AlertEvent, AlertRule
 
 logger = structlog.get_logger()
 
-router = APIRouter(prefix="/api/v1/monitoring", tags=["monitoring"])
+router = APIRouter(
+    prefix="/api/v1/monitoring", tags=["monitoring"], dependencies=[Depends(get_current_tenant)]
+)
 
 
 class AlertRuleCreate(BaseModel):
@@ -35,8 +38,12 @@ class UsageRecordRequest(BaseModel):
 
 @router.post("/alerts/rules")
 async def create_alert_rule(
-    tenant_id: str, body: AlertRuleCreate, db: AsyncSession = Depends(get_db)
+    tenant_id: str,
+    body: AlertRuleCreate,
+    db: AsyncSession = Depends(get_db),
+    tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> dict[str, Any]:
+    verify_tenant_access(tenant_id, tenant)
     if body.operator not in ("gt", "gte", "lt", "lte"):
         raise HTTPException(status_code=400, detail="Invalid operator")
     rule = AlertRule(
@@ -55,8 +62,11 @@ async def create_alert_rule(
 
 @router.get("/alerts/rules")
 async def list_alert_rules(
-    tenant_id: str, db: AsyncSession = Depends(get_db)
+    tenant_id: str,
+    db: AsyncSession = Depends(get_db),
+    tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> list[dict[str, Any]]:
+    verify_tenant_access(tenant_id, tenant)
     result = await db.execute(select(AlertRule).where(AlertRule.tenant_id == tenant_id))
     return [
         {
@@ -73,7 +83,12 @@ async def list_alert_rules(
 
 
 @router.post("/alerts/evaluate")
-async def evaluate(tenant_id: str, db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
+async def evaluate(
+    tenant_id: str,
+    db: AsyncSession = Depends(get_db),
+    tenant: dict[str, Any] = Depends(get_current_tenant),
+) -> dict[str, Any]:
+    verify_tenant_access(tenant_id, tenant)
     fired = await evaluate_alerts(db, tenant_id)
     return {"fired": len(fired), "alerts": [e.message for e in fired]}
 
@@ -83,7 +98,9 @@ async def list_alert_events(
     tenant_id: str,
     limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
+    tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> list[dict[str, Any]]:
+    verify_tenant_access(tenant_id, tenant)
     result = await db.execute(
         select(AlertEvent)
         .where(AlertEvent.tenant_id == tenant_id)
@@ -107,8 +124,11 @@ async def list_alert_events(
 
 @router.post("/usage/record")
 async def record_usage_endpoint(
-    body: UsageRecordRequest, db: AsyncSession = Depends(get_db)
+    body: UsageRecordRequest,
+    db: AsyncSession = Depends(get_db),
+    tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> dict[str, Any]:
+    verify_tenant_access(body.tenant_id, tenant)
     record = await record_usage(
         db, body.tenant_id, body.input_tokens, body.output_tokens, body.model
     )
@@ -126,7 +146,9 @@ async def get_costs(
     start_date: str | None = Query(None),
     end_date: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
+    tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> dict[str, Any]:
+    verify_tenant_access(tenant_id, tenant)
     records = await get_tenant_costs(db, tenant_id, start_date, end_date)
     total_cost = sum(r["cost_usd"] for r in records)
     return {"records": records, "total_cost": round(total_cost, 4)}
@@ -136,7 +158,9 @@ async def get_costs(
 async def cost_summary(
     tenant_id: str,
     db: AsyncSession = Depends(get_db),
+    tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> dict[str, Any]:
+    verify_tenant_access(tenant_id, tenant)
     records = await get_tenant_costs(db, tenant_id)
     total_cost = sum(r["cost_usd"] for r in records)
     total_requests = sum(r["requests"] for r in records)

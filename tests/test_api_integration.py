@@ -50,12 +50,17 @@ def mock_db():
 
 @pytest.fixture
 def override_deps(mock_db):
+    from apps.api.auth.deps import get_current_tenant
     from apps.api.core.database import get_db
 
     async def override_get_db() -> AsyncIterator[Any]:
         yield mock_db
 
+    async def override_auth() -> dict[str, Any]:
+        return {"tenant_id": "t1", "auth_method": "test"}
+
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_tenant] = override_auth
 
     # Patch RAGPipeline to avoid OpenAI/Qdrant initialization
     rag_patcher = patch("apps.api.conversation.router.RAGPipeline")
@@ -71,7 +76,7 @@ def override_deps(mock_db):
 
 
 @pytest.fixture
-async def client(_override_deps):
+async def client(override_deps):  # noqa: ARG001
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
@@ -159,7 +164,7 @@ class TestTenantAPI:
                 "FakeResult",
                 (),
                 {
-                    "scalar_one_or_none": lambda: mock_config,
+                    "scalar_one_or_none": lambda _self: mock_config,  # noqa: ARG005
                 },
             )()
 

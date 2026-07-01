@@ -6,9 +6,14 @@ from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.api.auth.deps import get_current_tenant
 from apps.api.core.database import get_db
 
-router = APIRouter(prefix="/api/v1/webhooks/tools", tags=["webhooks"])
+router = APIRouter(
+    prefix="/api/v1/webhooks/tools",
+    tags=["webhooks"],
+    dependencies=[Depends(get_current_tenant)],
+)
 
 
 class WebhookPayload(BaseModel):
