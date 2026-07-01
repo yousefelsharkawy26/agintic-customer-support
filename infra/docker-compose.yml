@@ -2,8 +2,6 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: customer_support
-      POSTGRES_USER: cs_user
       POSTGRES_PASSWORD: cs_dev_password
     ports:
       - '5432:5432'

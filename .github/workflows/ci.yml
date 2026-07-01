@@ -61,7 +61,7 @@ jobs:
       - name: Test (pytest)
         run: uv run python -m pytest -q --timeout=30 -x
         env:
-          DATABASE_URL: postgresql+asyncpg://cs_user:cs_dev_password@localhost:5432/customer_support
+          DATABASE_URL: postgresql+asyncpg://cs_user:cs_dev_password@postgres:5432/customer_support
           REDIS_URL: redis://localhost:6379/0
 
       - name: Eval CI (if baseline exists)
