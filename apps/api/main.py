@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 
 from apps.api.auth.router import router as auth_router
 from apps.api.conversation.router import router as chat_router
-from apps.api.core.config import settings
+from apps.api.core.config import configure_logging, settings
 from apps.api.events.redis_bus import RedisStreamEventBus
 from apps.api.events.subscribers import register_subscribers
 from apps.api.monitoring.router import router as monitoring_router
@@ -25,6 +25,7 @@ logger = structlog.get_logger()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    configure_logging()
     try:
         bus = RedisStreamEventBus(settings.redis_url)
         await register_subscribers(bus)

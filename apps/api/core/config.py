@@ -1,3 +1,8 @@
+from __future__ import annotations
+
+from typing import Any
+
+import structlog
 from pydantic_settings import BaseSettings
 
 
@@ -21,8 +26,37 @@ class Settings(BaseSettings):
     cohere_api_key: str = ""
 
     log_level: str = "INFO"
+    log_format: str = "json"
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    cors_origins: str = "*"
+    worker_count: int = 4
+
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
 settings = Settings()
+
+
+def configure_logging() -> None:
+    processors: list[Any] = [
+        structlog.stdlib.filter_by_level,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.dev.set_exc_info,
+    ]
+
+    if settings.log_format == "json":
+        processors.append(structlog.processors.JSONRenderer())
+    else:
+        processors.append(structlog.dev.ConsoleRenderer())
+
+    structlog.configure(
+        processors=processors,
+        wrapper_class=structlog.stdlib.BoundLogger,
+        context_class=dict,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        cache_logger_on_first_use=True,
+    )
