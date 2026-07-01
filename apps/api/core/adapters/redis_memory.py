@@ -7,12 +7,13 @@ from apps.api.core.interfaces import MemoryEntry, MemoryProvider, MessageRole
 
 
 class RedisMemoryProvider(MemoryProvider):
-    def __init__(self, redis_url: str, ttl: int = 86400) -> None:
+    def __init__(self, redis_url: str, ttl: int = 86400, tenant_prefix: str = "") -> None:
         self._redis = aioredis.from_url(redis_url, decode_responses=True)
         self._ttl = ttl
+        self._prefix = f"{tenant_prefix}:" if tenant_prefix else ""
 
     def _key(self, conversation_id: str) -> str:
-        return f"memory:{conversation_id}"
+        return f"{self._prefix}memory:{conversation_id}"
 
     async def add(self, conversation_id: str, entry: MemoryEntry) -> None:
         data = {

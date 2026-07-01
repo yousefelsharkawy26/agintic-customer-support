@@ -14,6 +14,7 @@ from apps.api.events.redis_bus import RedisStreamEventBus
 from apps.api.events.subscribers import register_subscribers
 from apps.api.rag.router import router as rag_router
 from apps.api.rate_limiter import RateLimiterMiddleware
+from apps.api.tenants.router import router as tenants_router
 from apps.api.tools.router import router as tools_router
 from apps.api.tools.webhooks import router as webhooks_router
 
@@ -45,6 +46,7 @@ app.add_middleware(RateLimiterMiddleware)
 app.include_router(chat_router)
 app.include_router(auth_router)
 app.include_router(rag_router)
+app.include_router(tenants_router)
 app.include_router(tools_router)
 app.include_router(webhooks_router)
 

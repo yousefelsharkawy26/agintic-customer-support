@@ -75,7 +75,7 @@ class MCPTransport:
     async def health(self) -> bool:
         try:
             response = await self._client.get("/health", timeout=5.0)
-            return cast(bool, response.is_success)
+            return bool(response.is_success)
         except Exception:
             return False
 

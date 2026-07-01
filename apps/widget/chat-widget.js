@@ -6,7 +6,60 @@
     primaryColor: '#2563eb',
     title: 'Support',
     position: 'bottom-right',
+    locale: 'en',
+    i18n: {
+      placeholder: 'Type a message...',
+      send: 'Send',
+      fileUpload: 'Attach file',
+      typing: '...',
+      error: 'Connection error. Please try again.',
+      errorGeneric: 'An error occurred.',
+      sources: 'Sources',
+    },
   };
+
+  const I18N = {
+    en: {
+      placeholder: 'Type a message...',
+      send: 'Send',
+      fileUpload: 'Attach file',
+      typing: '...',
+      error: 'Connection error. Please try again.',
+      errorGeneric: 'An error occurred.',
+      sources: 'Sources',
+    },
+    es: {
+      placeholder: 'Escribe un mensaje...',
+      send: 'Enviar',
+      fileUpload: 'Adjuntar archivo',
+      typing: '...',
+      error: 'Error de conexión. Intente de nuevo.',
+      errorGeneric: 'Ocurrió un error.',
+      sources: 'Fuentes',
+    },
+    fr: {
+      placeholder: 'Écrivez un message...',
+      send: 'Envoyer',
+      fileUpload: 'Joindre un fichier',
+      typing: '...',
+      error: 'Erreur de connexion. Réessayez.',
+      errorGeneric: 'Une erreur est survenue.',
+      sources: 'Sources',
+    },
+    de: {
+      placeholder: 'Nachricht schreiben...',
+      send: 'Senden',
+      fileUpload: 'Datei anhängen',
+      typing: '...',
+      error: 'Verbindungsfehler. Bitte versuchen Sie es erneut.',
+      errorGeneric: 'Ein Fehler ist aufgetreten.',
+      sources: 'Quellen',
+    },
+  };
+
+  function t(key) {
+    return (I18N[CONFIG.locale] || I18N.en)[key] || CONFIG.i18n[key] || key;
+  }
 
   let styles = `
 #cs-widget-container { position:fixed; bottom:20px; right:20px; z-index:999999; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
@@ -51,11 +104,11 @@
       <div id="cs-widget-messages"></div>
       <div id="cs-widget-input">
         <div class="cs-file-upload">
-          <label for="cs-file-input" title="Attach file">&#x1f4ce;</label>
+          <label for="cs-file-input" title="${t('fileUpload')}">&#x1f4ce;</label>
           <input type="file" id="cs-file-input" style="display:none" />
         </div>
-        <input type="text" id="cs-widget-input-field" placeholder="Type a message..." />
-        <button id="cs-widget-send">Send</button>
+        <input type="text" id="cs-widget-input-field" placeholder="${t('placeholder')}" />
+        <button id="cs-widget-send">${t('send')}</button>
       </div>
     </div>
     <button id="cs-widget-toggle">&#x1f4ac;</button>
@@ -188,7 +241,7 @@
             } else if (data.type === 'citations') {
               let citeEl = document.createElement('div');
               citeEl.className = 'cs-citations';
-              citeEl.textContent = 'Sources: ' + (data.citations || []).join(', ');
+              citeEl.textContent = t('sources') + ': ' + (data.citations || []).join(', ');
               messagesEl.appendChild(citeEl);
             } else if (data.type === 'done') {
               conversationId = data.conversation_id || conversationId;
@@ -203,7 +256,7 @@
       }
     } catch (err) {
       typingEl.classList.remove('typing');
-      typingEl.textContent = 'Connection error. Please try again.';
+      typingEl.textContent = t('error');
       typingEl.style.color = '#dc2626';
     }
     uploadedFiles = [];
