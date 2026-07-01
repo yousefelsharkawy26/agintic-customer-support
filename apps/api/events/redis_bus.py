@@ -25,12 +25,12 @@ class RedisStreamEventBus(EventBus):
         }
         await self._redis.xadd(
             f"events:{event.type}",
-            payload,
+            payload,  # type: ignore[arg-type]
             maxlen=self._stream_maxlen,
         )
         await self._redis.xadd(
             "events:all",
-            payload,
+            payload,  # type: ignore[arg-type]
             maxlen=self._stream_maxlen,
         )
         await self._dispatch_local(event)

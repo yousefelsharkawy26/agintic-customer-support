@@ -418,19 +418,19 @@ Treat the widget as a standalone product with its own roadmap:
 
 **Exit criteria:** End-to-end chat works with streaming, model routing, versioned prompts, and event subscribers.
 
-- [ ] FastAPI app with health/readiness probes.
-- [ ] `POST /chat` + `GET /conversations/{id}`.
-- [ ] **SSE streaming** for token-by-token responses.
-- [ ] Conversation Manager (Postgres + Redis cache).
-- [ ] **Chat Widget v1** (vanilla TS, drop-in script, theming).
-- [ ] JWT auth + per-widget API keys.
-- [ ] Rate limiting per tenant.
-- [ ] Structured logging + request IDs.
-- [ ] Error handling + graceful degradation.
-- [ ] **Prompt Registry** (Postgres-backed, with versioning + tenant overrides + rollback).
-- [ ] **Model Router** (interface + OpenAI/Claude/Gemini adapters + failover).
-- [ ] **Event Bus subscribers** for Analytics, Billing, Audit.
-- [ ] Eval harness skeleton + first 20 golden questions.
+- [x] FastAPI app with health/readiness probes.
+- [x] `POST /chat` + `GET /conversations/{id}`.
+- [x] **SSE streaming** for token-by-token responses.
+- [x] Conversation Manager (Postgres + Redis cache).
+- [x] **Chat Widget v1** (vanilla TS, drop-in script, theming).
+- [x] JWT auth + per-widget API keys.
+- [x] Rate limiting per tenant.
+- [x] Structured logging + request IDs.
+- [x] Error handling + graceful degradation.
+- [x] **Prompt Registry** (Postgres-backed, with versioning + tenant overrides + rollback).
+- [x] **Model Router** (interface + OpenAI/Claude/Gemini adapters + failover).
+- [x] **Event Bus subscribers** for Analytics, Billing, Audit.
+- [x] Eval harness skeleton + first 20 golden questions.
 
 **Demo milestone:** Widget on a test page, LLM responds via streaming with model selection visible in traces.
 

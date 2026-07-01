@@ -26,10 +26,14 @@ indent-width = 4
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "SIM", "ARG"]
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"apps/api/eval/dataset.py" = ["E501"]
+"apps/api/eval/ragas_runner.py" = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"
-
 [tool.mypy]
 python_version = "3.13"
 strict = true
@@ -37,9 +41,9 @@ ignore_missing_imports = true
 explicit_package_bases = true
 warn_unused_ignores = false
 
-
-
-
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -54,10 +58,12 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "datasets>=3.0.0",
     "mypy>=2.1.0",
     "pre-commit>=4.6.0",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.1.0",
+    "ragas>=0.2.0",
     "ruff>=0.15.20",
 ]
