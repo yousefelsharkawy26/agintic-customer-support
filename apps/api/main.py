@@ -12,11 +12,13 @@ from apps.api.conversation.router import router as chat_router
 from apps.api.core.config import settings
 from apps.api.events.redis_bus import RedisStreamEventBus
 from apps.api.events.subscribers import register_subscribers
+from apps.api.monitoring.router import router as monitoring_router
 from apps.api.rag.router import router as rag_router
 from apps.api.rate_limiter import RateLimiterMiddleware
 from apps.api.tenants.router import router as tenants_router
 from apps.api.tools.router import router as tools_router
 from apps.api.tools.webhooks import router as webhooks_router
+from apps.api.widget.router import router as widget_router
 
 logger = structlog.get_logger()
 
@@ -47,8 +49,10 @@ app.include_router(chat_router)
 app.include_router(auth_router)
 app.include_router(rag_router)
 app.include_router(tenants_router)
+app.include_router(monitoring_router)
 app.include_router(tools_router)
 app.include_router(webhooks_router)
+app.include_router(widget_router)
 
 
 @app.middleware("http")

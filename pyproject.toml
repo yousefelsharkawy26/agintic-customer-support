@@ -31,6 +31,7 @@ ignore = ["B008"]
 [tool.ruff.lint.per-file-ignores]
 "apps/api/eval/dataset.py" = ["E501"]
 "apps/api/eval/ragas_runner.py" = ["E501"]
+"apps/api/eval/ci_runner.py" = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"
