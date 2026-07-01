@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from collections.abc import AsyncIterator
 from typing import Any
@@ -8,15 +10,29 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.api.agent.interfaces import AgentContext
+from apps.api.agent.pipeline import AgentPipeline
 from apps.api.conversation.manager import ConversationManager
 from apps.api.core.database import get_db
 from apps.api.core.interfaces import LLMConfig, LLMMessage, LLMProvider, MessageRole
+from apps.api.guardrails.guardrails import run_input_guardrails, run_output_guardrails
 from apps.api.models.router import ModelRouter
 from apps.api.rag.pipeline import RAGContext, RAGPipeline
+from apps.api.rag.semantic_cache import SemanticCache
 
 logger = structlog.get_logger()
 
 router = APIRouter(prefix="/api/v1", tags=["chat"])
+
+_semantic_cache: SemanticCache | None = None
+_agent_pipeline: AgentPipeline | None = None
+
+
+def _get_pipeline() -> AgentPipeline:
+    global _agent_pipeline
+    if _agent_pipeline is None:
+        _agent_pipeline = AgentPipeline()
+    return _agent_pipeline
 
 
 class ChatRequest(BaseModel):
@@ -39,6 +55,15 @@ async def chat(
     body: ChatRequest,
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse | ChatResponse:
+    guardrail_result = run_input_guardrails(body.message)
+    if not guardrail_result.passed:
+        return ChatResponse(
+            conversation_id="",
+            message="I couldn't process that request due to safety concerns.",
+            model="guardrail",
+        )
+    sanitized = guardrail_result.sanitized_input or body.message
+
     mgr = ConversationManager()
     rag = RAGPipeline()
     tenant_id = body.tenant_id or "default"
@@ -50,18 +75,29 @@ async def chat(
     else:
         conv = await mgr.create_conversation(db, tenant_id, body.user_id)
 
-    await mgr.add_message(db, conv.id, MessageRole.USER, body.message)
+    await mgr.add_message(db, conv.id, MessageRole.USER, sanitized)
 
     history = await mgr.get_history(db, conv.id)
-    ctx = await rag.retrieve(body.message, tenant_id=tenant_id)
-    messages = RAGPipeline.build_messages_static(body.message, history, ctx)
+    ctx = await rag.retrieve(sanitized, tenant_id=tenant_id)
+
+    agent_ctx = AgentContext(
+        query=sanitized,
+        conversation_id=conv.id,
+        tenant_id=tenant_id,
+        user_id=body.user_id,
+        messages=history,
+    )
+    pipeline = _get_pipeline()
+    agent_ctx = await pipeline.run(agent_ctx)
+
+    messages = RAGPipeline.build_messages_static(sanitized, history, ctx)
 
     model_router = ModelRouter()
     llm = model_router.select(conv.id)
 
     if body.stream:
         return StreamingResponse(
-            _stream_response(mgr, rag, db, llm, conv.id, body.message, history, ctx),
+            _stream_response(mgr, rag, db, llm, conv.id, sanitized, history, ctx),
             media_type="text/event-stream",
             headers={
                 "X-Conversation-ID": conv.id,
@@ -73,17 +109,22 @@ async def chat(
     config = LLMConfig()
     response = await llm.generate(messages, config)
     citations = rag.extract_citations(response.content) if ctx.chunks else []
+    output_check = run_output_guardrails(response.content)
+    final_content = (
+        response.content if output_check.passed else "I couldn't generate a safe response."
+    )
+
     await mgr.add_message(
         db,
         conv.id,
         MessageRole.ASSISTANT,
-        response.content,
+        final_content,
         model=response.model,
         token_count=(response.usage or {}).get("total_tokens"),
     )
     return ChatResponse(
         conversation_id=conv.id,
-        message=response.content,
+        message=final_content,
         model=response.model,
         citations=citations,
     )
@@ -109,13 +150,17 @@ async def _stream_response(
         logger.error("stream_error", conversation_id=conv_id, error=str(e))
         yield f"data: {json.dumps({'type': 'error', 'content': 'Streaming error occurred.'})}\n\n"
     finally:
+        output_check = run_output_guardrails(full_content)
+        final_content = (
+            full_content if output_check.passed else "I couldn't generate a safe response."
+        )
         citations = rag.extract_citations(full_content) if ctx.chunks else []
-        token_count = len(full_content.split())
+        token_count = len(final_content.split())
         await mgr.add_message(
             db,
             conv_id,
             MessageRole.ASSISTANT,
-            full_content,
+            final_content,
             model=llm.__class__.__name__,
             token_count=token_count,
         )
