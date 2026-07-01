@@ -24,6 +24,16 @@ class SessionStartRequest(BaseModel):
     visitor_id: str
     locale: str = "en"
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "tenant_id": "tenant-abc-123",
+                "visitor_id": "visitor-xyz-789",
+                "locale": "en",
+            }
+        }
+    }
+
 
 class OfflineMessageCreate(BaseModel):
     tenant_id: str
@@ -32,6 +42,19 @@ class OfflineMessageCreate(BaseModel):
     content: str
     message_type: str = "text"
     client_ts: str | None = None
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "tenant_id": "tenant-abc-123",
+                "session_id": "session-1",
+                "visitor_id": "visitor-xyz-789",
+                "content": "Please contact me when you're back online.",
+                "message_type": "text",
+                "client_ts": "2026-07-01T12:00:00Z",
+            }
+        }
+    }
 
 
 class WidgetSessionUpdate(BaseModel):
@@ -49,6 +72,18 @@ class WidgetSettingsUpdate(BaseModel):
     show_branding: bool | None = None
     is_active: bool | None = None
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "primary_color": "#10b981",
+                "position": "bottom-left",
+                "title": "Acme Support",
+                "greeting": "Welcome to Acme! How can we help?",
+                "show_branding": False,
+            }
+        }
+    }
+
 
 class AnalyticsEventCreate(BaseModel):
     tenant_id: str
@@ -57,8 +92,28 @@ class AnalyticsEventCreate(BaseModel):
     event_type: str
     metadata: dict[str, object] | None = None
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "tenant_id": "tenant-abc-123",
+                "session_id": "session-1",
+                "visitor_id": "visitor-xyz-789",
+                "event_type": "widget_opened",
+                "metadata": {"source": "button"},
+            }
+        }
+    }
 
-@router.post("/sessions/start")
+
+@router.post(
+    "/sessions/start",
+    summary="Start or resume a widget session",
+    description=(
+        "Called by the embeddable widget when a user opens it. "
+        "If an active session exists for this visitor, it's resumed. "
+        "Otherwise, a new session is created and returned."
+    ),
+)
 async def start_session(
     body: SessionStartRequest, db: AsyncSession = Depends(get_db)
 ) -> dict[str, Any]:

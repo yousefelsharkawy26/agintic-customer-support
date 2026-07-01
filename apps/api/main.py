@@ -5,6 +5,7 @@ from typing import Any
 
 import structlog
 from fastapi import FastAPI, Request
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 
 from apps.api.auth.router import router as auth_router
@@ -41,10 +42,113 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger.info("app_stopping")
 
 
+TAGS_METADATA = [
+    {
+        "name": "auth",
+        "description": (
+            "Authentication & API key management. Get JWT tokens or create "
+            "API keys for programmatic access."
+        ),
+    },
+    {
+        "name": "chat",
+        "description": (
+            "Core chat endpoint. Send messages, get streaming responses " "with citations."
+        ),
+    },
+    {
+        "name": "rag",
+        "description": (
+            "Document ingestion & retrieval. Upload, list, search "
+            "tenant-scoped documents for RAG."
+        ),
+    },
+    {
+        "name": "tenants",
+        "description": (
+            "Tenant configuration & quotas. Manage LLM models, rate limits, " "migration."
+        ),
+    },
+    {
+        "name": "monitoring",
+        "description": (
+            "Alerts, cost tracking, health metrics. View alert rules, firing "
+            "alerts, cost per tenant."
+        ),
+    },
+    {
+        "name": "mcp",
+        "description": (
+            "Model Context Protocol servers. Register and manage external " "tool servers."
+        ),
+    },
+    {
+        "name": "webhooks",
+        "description": (
+            "Outbound webhook integrations. Configure Slack, Zendesk, "
+            "Intercom, HubSpot deliveries with HMAC signing & retries."
+        ),
+    },
+    {
+        "name": "widget",
+        "description": (
+            "Embeddable chat widget API. Session management, offline "
+            "messaging, public settings, analytics."
+        ),
+    },
+]
+
 app = FastAPI(
     title=settings.app_name,
     version="0.1.0",
     lifespan=lifespan,
+    openapi_tags=TAGS_METADATA,
+    description="""
+# Customer Support AI API
+
+A multi-tenant AI customer support platform with RAG, webhooks,
+and embeddable widgets.
+
+## Authentication
+
+**Bearer JWT** (recommended for servers):
+```
+Authorization: Bearer <jwt_token>
+```
+Obtain via `POST /api/v1/auth/token` with an API key.
+
+**API Key** (simple, for scripts):
+```
+X-API-Key: <api_key>
+```
+Create via `POST /api/v1/auth/api-keys`.
+
+**Widget (public, no auth)**:
+Widget endpoints (`/api/v1/widget/*`) are public for embeddable chat.
+
+## Rate Limiting
+
+Default: 60 req/min per tenant. Headers:
+`X-RateLimit-Limit`, `X-RateLimit-Remaining`.
+
+## Error Format
+
+```json
+{"error": "error_code", "message": "Human readable description"}
+```
+
+## Webhooks
+
+Configure at `/api/v1/webhooks/configs`. Events delivered with
+HMAC-SHA256 signature in `X-Signature-256` header. Retries: 3x with
+exponential backoff (max 30s).
+
+## Widget Embedding
+
+```html
+<script data-tenant-id="your-tenant-id" src="/chat-widget.js"></script>
+```
+""",
 )
 
 app.add_middleware(RateLimiterMiddleware)
@@ -58,6 +162,43 @@ app.include_router(tools_router)
 app.include_router(tool_webhooks_router)
 app.include_router(webhooks_router)
 app.include_router(widget_router)
+
+
+def custom_openapi() -> dict[str, Any]:
+    if app.openapi_schema:
+        return app.openapi_schema  # type: ignore[no-any-return]
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+        tags=app.openapi_tags,
+    )
+    openapi_schema["components"]["securitySchemes"] = {
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": (
+                "JWT token from `POST /api/v1/auth/token`. "
+                "Header: `Authorization: Bearer <token>`"
+            ),
+        },
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "X-API-Key",
+            "description": (
+                "API key from `POST /api/v1/auth/api-keys`. " "Header: `X-API-Key: <key>`"
+            ),
+        },
+    }
+    openapi_schema["security"] = [{"BearerAuth": []}, {"ApiKeyAuth": []}]
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema  # type: ignore[no-any-return]
+
+
+app.openapi = custom_openapi  # type: ignore[method-assign]
 
 
 @app.middleware("http")
