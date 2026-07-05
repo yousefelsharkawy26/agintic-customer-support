@@ -1,0 +1,542 @@
+============================= test session starts ==============================
+platform linux -- Python 3.13.12, pytest-9.1.1, pluggy-1.6.0 -- /home/elsharkawy/Desktop/AginticCustomerSupport/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/elsharkawy/Desktop/AginticCustomerSupport
+configfile: pyproject.toml
+plugins: anyio-4.14.1, asyncio-1.4.0, cov-7.1.0, langsmith-0.9.4
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=session, asyncio_default_test_loop_scope=function
+collecting ... collected 7 items
+
+tests/test_rls_integration.py::TestRLSSchema::test_phase1_tables_have_enable_and_force_rls PASSED [ 14%]
+tests/test_rls_integration.py::TestRLSSchema::test_phase1_policies_exist_with_correct_using_clause FAILED [ 28%]
+tests/test_rls_integration.py::TestCrossTenantIsolation::test_tenant_a_cannot_read_tenant_b_conversations FAILED [ 42%]
+tests/test_rls_integration.py::TestCrossTenantIsolation::test_tenant_a_cannot_read_tenant_b_messages FAILED [ 57%]
+tests/test_rls_integration.py::TestCrossTenantIsolation::test_unbound_session_sees_all_rows FAILED [ 71%]
+tests/test_rls_integration.py::TestCrossTenantIsolation::test_switching_tenant_mid_session_is_prevented PASSED [ 85%]
+tests/test_rls_integration.py::TestTransactionLifecycle::test_tenant_binding_survives_commit_and_rollback FAILED [100%]
+
+=================================== FAILURES ===================================
+______ TestRLSSchema.test_phase1_policies_exist_with_correct_using_clause ______
+tests/test_rls_integration.py:111: in test_phase1_policies_exist_with_correct_using_clause
+    result = await session.execute(text("""
+.venv/lib/python3.13/site-packages/sqlalchemy/ext/asyncio/session.py:448: in execute
+    result = await greenlet_spawn(
+.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py:201: in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:2373: in execute
+    return self._execute_internal(
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:2261: in _execute_internal
+    conn = self._connection_for_bind(bind)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:2113: in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<string>:2: in _connection_for_bind
+    ???
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:1191: in _connection_for_bind
+    conn = bind.connect()
+           ^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py:3295: in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py:144: in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py:3319: in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/pool/base.py:448: in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/pool/base.py:1371: in _checkout
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/util/langhelpers.py:122: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.13/site-packages/sqlalchemy/pool/base.py:1309: in _checkout
+    result = pool._dialect._do_ping_w_event(
+.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py:729: in _do_ping_w_event
+    return self.do_ping(dbapi_connection)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:1164: in do_ping
+    dbapi_connection.ping()
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:818: in ping
+    self._handle_exception(error)
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:799: in _handle_exception
+    raise error
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:816: in ping
+    _ = self.await_(self._async_ping())
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:825: in _async_ping
+    await tr.start()
+.venv/lib/python3.13/site-packages/asyncpg/transaction.py:146: in start
+    await self._connection.execute(query)
+.venv/lib/python3.13/site-packages/asyncpg/connection.py:354: in execute
+    result = await self._protocol.query(query, timeout)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+asyncpg/protocol/protocol.pyx:369: in query
+    return await waiter
+E   RuntimeError: Task <Task pending name='Task-6' coro=<TestRLSSchema.test_phase1_policies_exist_with_correct_using_clause() running at /home/elsharkawy/Desktop/AginticCustomerSupport/tests/test_rls_integration.py:111> cb=[_run_until_complete_cb() at /home/elsharkawy/miniconda3/lib/python3.13/asyncio/base_events.py:181]> got Future <Future pending cb=[BaseProtocol._on_waiter_completed()]> attached to a different loop
+------------------------------ Captured log call -------------------------------
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:377 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x78fec5b309b0>>
+Traceback (most recent call last):
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/pool/base.py", line 373, in _close_connection
+    self._dialect.do_terminate(connection)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 1131, in do_terminate
+    dbapi_connection.terminate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/connectors/asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/asyncpg/connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 617, in close
+  File "asyncpg/protocol/protocol.pyx", line 650, in asyncpg.protocol.protocol.BaseProtocol._request_cancel
+    con._cancel_current_command(self.cancel_sent_waiter)
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/asyncpg/connection.py", line 1682, in _cancel_current_command
+    self._cancellations.add(self._loop.create_task(self._cancel(waiter)))
+                            ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/elsharkawy/miniconda3/lib/python3.13/asyncio/base_events.py", line 466, in create_task
+    self._check_closed()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "/home/elsharkawy/miniconda3/lib/python3.13/asyncio/base_events.py", line 556, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+__ TestCrossTenantIsolation.test_tenant_a_cannot_read_tenant_b_conversations ___
+tests/test_rls_integration.py:142: in test_tenant_a_cannot_read_tenant_b_conversations
+    own = await session.execute(
+.venv/lib/python3.13/site-packages/sqlalchemy/ext/asyncio/session.py:448: in execute
+    result = await greenlet_spawn(
+.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py:201: in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:2373: in execute
+    return self._execute_internal(
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:2261: in _execute_internal
+    conn = self._connection_for_bind(bind)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:2113: in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<string>:2: in _connection_for_bind
+    ???
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:1191: in _connection_for_bind
+    conn = bind.connect()
+           ^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py:3295: in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py:144: in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py:3319: in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/pool/base.py:448: in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/pool/base.py:1371: in _checkout
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/util/langhelpers.py:122: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.13/site-packages/sqlalchemy/pool/base.py:1309: in _checkout
+    result = pool._dialect._do_ping_w_event(
+.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py:729: in _do_ping_w_event
+    return self.do_ping(dbapi_connection)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:1164: in do_ping
+    dbapi_connection.ping()
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:818: in ping
+    self._handle_exception(error)
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:799: in _handle_exception
+    raise error
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:816: in ping
+    _ = self.await_(self._async_ping())
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:825: in _async_ping
+    await tr.start()
+.venv/lib/python3.13/site-packages/asyncpg/transaction.py:146: in start
+    await self._connection.execute(query)
+.venv/lib/python3.13/site-packages/asyncpg/connection.py:354: in execute
+    result = await self._protocol.query(query, timeout)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+asyncpg/protocol/protocol.pyx:369: in query
+    return await waiter
+E   RuntimeError: Task <Task pending name='Task-14' coro=<TestCrossTenantIsolation.test_tenant_a_cannot_read_tenant_b_conversations() running at /home/elsharkawy/Desktop/AginticCustomerSupport/tests/test_rls_integration.py:142> cb=[_run_until_complete_cb() at /home/elsharkawy/miniconda3/lib/python3.13/asyncio/base_events.py:181]> got Future <Future pending cb=[BaseProtocol._on_waiter_completed()]> attached to a different loop
+------------------------------ Captured log call -------------------------------
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:377 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x78fec481a6c0>>
+Traceback (most recent call last):
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/pool/base.py", line 373, in _close_connection
+    self._dialect.do_terminate(connection)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 1131, in do_terminate
+    dbapi_connection.terminate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/connectors/asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/asyncpg/connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 618, in close
+    await self.cancel_sent_waiter
+RuntimeError: Task <Task pending name='Task-15' coro=<AsyncAdapt_asyncpg_connection._terminate_graceful_close() running at /home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:912> cb=[shield.<locals>._inner_done_callback() at /home/elsharkawy/miniconda3/lib/python3.13/asyncio/tasks.py:958]> got Future <Future pending> attached to a different loop
+---------------------------- Captured log teardown -----------------------------
+ERROR    asyncio:base_events.py:1879 Future exception was never retrieved
+future: <Future finished exception=InternalClientError('got result for unknown protocol state 3')>
+Traceback (most recent call last):
+  File "asyncpg/protocol/protocol.pyx", line 892, in asyncpg.protocol.protocol.BaseProtocol._dispatch_result
+    raise apg_exc.InternalClientError(
+asyncpg.exceptions._base.InternalClientError: got result for unknown protocol state 3
+_____ TestCrossTenantIsolation.test_tenant_a_cannot_read_tenant_b_messages _____
+tests/test_rls_integration.py:162: in test_tenant_a_cannot_read_tenant_b_messages
+    result = await session.execute(
+.venv/lib/python3.13/site-packages/sqlalchemy/ext/asyncio/session.py:448: in execute
+    result = await greenlet_spawn(
+.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py:201: in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:2373: in execute
+    return self._execute_internal(
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:2261: in _execute_internal
+    conn = self._connection_for_bind(bind)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:2113: in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<string>:2: in _connection_for_bind
+    ???
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:1191: in _connection_for_bind
+    conn = bind.connect()
+           ^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py:3295: in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py:144: in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py:3319: in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/pool/base.py:448: in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/pool/base.py:1371: in _checkout
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/util/langhelpers.py:122: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.13/site-packages/sqlalchemy/pool/base.py:1309: in _checkout
+    result = pool._dialect._do_ping_w_event(
+.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py:729: in _do_ping_w_event
+    return self.do_ping(dbapi_connection)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:1164: in do_ping
+    dbapi_connection.ping()
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:818: in ping
+    self._handle_exception(error)
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:799: in _handle_exception
+    raise error
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:816: in ping
+    _ = self.await_(self._async_ping())
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:825: in _async_ping
+    await tr.start()
+.venv/lib/python3.13/site-packages/asyncpg/transaction.py:146: in start
+    await self._connection.execute(query)
+.venv/lib/python3.13/site-packages/asyncpg/connection.py:354: in execute
+    result = await self._protocol.query(query, timeout)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+asyncpg/protocol/protocol.pyx:369: in query
+    return await waiter
+E   RuntimeError: Task <Task pending name='Task-25' coro=<TestCrossTenantIsolation.test_tenant_a_cannot_read_tenant_b_messages() running at /home/elsharkawy/Desktop/AginticCustomerSupport/tests/test_rls_integration.py:162> cb=[_run_until_complete_cb() at /home/elsharkawy/miniconda3/lib/python3.13/asyncio/base_events.py:181]> got Future <Future pending cb=[BaseProtocol._on_waiter_completed()]> attached to a different loop
+------------------------------ Captured log call -------------------------------
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:377 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x78fec481bd40>>
+Traceback (most recent call last):
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/pool/base.py", line 373, in _close_connection
+    self._dialect.do_terminate(connection)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 1131, in do_terminate
+    dbapi_connection.terminate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/connectors/asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/asyncpg/connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 618, in close
+    await self.cancel_sent_waiter
+RuntimeError: Task <Task pending name='Task-26' coro=<AsyncAdapt_asyncpg_connection._terminate_graceful_close() running at /home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:912> cb=[shield.<locals>._inner_done_callback() at /home/elsharkawy/miniconda3/lib/python3.13/asyncio/tasks.py:958]> got Future <Future pending> attached to a different loop
+---------------------------- Captured log teardown -----------------------------
+ERROR    asyncio:base_events.py:1879 Future exception was never retrieved
+future: <Future finished exception=InternalClientError('got result for unknown protocol state 3')>
+Traceback (most recent call last):
+  File "asyncpg/protocol/protocol.pyx", line 892, in asyncpg.protocol.protocol.BaseProtocol._dispatch_result
+    raise apg_exc.InternalClientError(
+asyncpg.exceptions._base.InternalClientError: got result for unknown protocol state 3
+_________ TestCrossTenantIsolation.test_unbound_session_sees_all_rows __________
+tests/test_rls_integration.py:179: in test_unbound_session_sees_all_rows
+    result = await session.execute(
+.venv/lib/python3.13/site-packages/sqlalchemy/ext/asyncio/session.py:448: in execute
+    result = await greenlet_spawn(
+.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py:201: in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:2373: in execute
+    return self._execute_internal(
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:2261: in _execute_internal
+    conn = self._connection_for_bind(bind)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:2113: in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<string>:2: in _connection_for_bind
+    ???
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:1191: in _connection_for_bind
+    conn = bind.connect()
+           ^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py:3295: in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py:144: in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py:3319: in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/pool/base.py:448: in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/pool/base.py:1371: in _checkout
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/util/langhelpers.py:122: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.13/site-packages/sqlalchemy/pool/base.py:1309: in _checkout
+    result = pool._dialect._do_ping_w_event(
+.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py:729: in _do_ping_w_event
+    return self.do_ping(dbapi_connection)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:1164: in do_ping
+    dbapi_connection.ping()
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:818: in ping
+    self._handle_exception(error)
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:799: in _handle_exception
+    raise error
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:816: in ping
+    _ = self.await_(self._async_ping())
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:825: in _async_ping
+    await tr.start()
+.venv/lib/python3.13/site-packages/asyncpg/transaction.py:146: in start
+    await self._connection.execute(query)
+.venv/lib/python3.13/site-packages/asyncpg/connection.py:354: in execute
+    result = await self._protocol.query(query, timeout)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+asyncpg/protocol/protocol.pyx:369: in query
+    return await waiter
+E   RuntimeError: Task <Task pending name='Task-36' coro=<TestCrossTenantIsolation.test_unbound_session_sees_all_rows() running at /home/elsharkawy/Desktop/AginticCustomerSupport/tests/test_rls_integration.py:179> cb=[_run_until_complete_cb() at /home/elsharkawy/miniconda3/lib/python3.13/asyncio/base_events.py:181]> got Future <Future pending cb=[BaseProtocol._on_waiter_completed()]> attached to a different loop
+------------------------------ Captured log call -------------------------------
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:377 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x78fec487ce60>>
+Traceback (most recent call last):
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/pool/base.py", line 373, in _close_connection
+    self._dialect.do_terminate(connection)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 1131, in do_terminate
+    dbapi_connection.terminate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/connectors/asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/asyncpg/connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 618, in close
+    await self.cancel_sent_waiter
+RuntimeError: Task <Task pending name='Task-37' coro=<AsyncAdapt_asyncpg_connection._terminate_graceful_close() running at /home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:912> cb=[shield.<locals>._inner_done_callback() at /home/elsharkawy/miniconda3/lib/python3.13/asyncio/tasks.py:958]> got Future <Future pending> attached to a different loop
+---------------------------- Captured log teardown -----------------------------
+ERROR    asyncio:base_events.py:1879 Future exception was never retrieved
+future: <Future finished exception=InternalClientError('got result for unknown protocol state 3')>
+Traceback (most recent call last):
+  File "asyncpg/protocol/protocol.pyx", line 892, in asyncpg.protocol.protocol.BaseProtocol._dispatch_result
+    raise apg_exc.InternalClientError(
+asyncpg.exceptions._base.InternalClientError: got result for unknown protocol state 3
+__ TestTransactionLifecycle.test_tenant_binding_survives_commit_and_rollback ___
+tests/test_rls_integration.py:222: in test_tenant_binding_survives_commit_and_rollback
+    val1 = (await session.execute(
+.venv/lib/python3.13/site-packages/sqlalchemy/ext/asyncio/session.py:448: in execute
+    result = await greenlet_spawn(
+.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py:201: in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:2373: in execute
+    return self._execute_internal(
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:2261: in _execute_internal
+    conn = self._connection_for_bind(bind)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:2113: in _connection_for_bind
+    return trans._connection_for_bind(engine, execution_options)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<string>:2: in _connection_for_bind
+    ???
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/orm/session.py:1191: in _connection_for_bind
+    conn = bind.connect()
+           ^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py:3295: in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py:144: in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/engine/base.py:3319: in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/pool/base.py:448: in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/pool/base.py:1371: in _checkout
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/util/langhelpers.py:122: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.13/site-packages/sqlalchemy/pool/base.py:1309: in _checkout
+    result = pool._dialect._do_ping_w_event(
+.venv/lib/python3.13/site-packages/sqlalchemy/engine/default.py:729: in _do_ping_w_event
+    return self.do_ping(dbapi_connection)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:1164: in do_ping
+    dbapi_connection.ping()
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:818: in ping
+    self._handle_exception(error)
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:799: in _handle_exception
+    raise error
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:816: in ping
+    _ = self.await_(self._async_ping())
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:825: in _async_ping
+    await tr.start()
+.venv/lib/python3.13/site-packages/asyncpg/transaction.py:146: in start
+    await self._connection.execute(query)
+.venv/lib/python3.13/site-packages/asyncpg/connection.py:354: in execute
+    result = await self._protocol.query(query, timeout)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+asyncpg/protocol/protocol.pyx:369: in query
+    return await waiter
+E   RuntimeError: Task <Task pending name='Task-49' coro=<TestTransactionLifecycle.test_tenant_binding_survives_commit_and_rollback() running at /home/elsharkawy/Desktop/AginticCustomerSupport/tests/test_rls_integration.py:222> cb=[_run_until_complete_cb() at /home/elsharkawy/miniconda3/lib/python3.13/asyncio/base_events.py:181]> got Future <Future pending cb=[BaseProtocol._on_waiter_completed()]> attached to a different loop
+------------------------------ Captured log call -------------------------------
+ERROR    sqlalchemy.pool.impl.AsyncAdaptedQueuePool:base.py:377 Exception terminating connection <AdaptedConnection <asyncpg.connection.Connection object at 0x78fec481b2f0>>
+Traceback (most recent call last):
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/pool/base.py", line 373, in _close_connection
+    self._dialect.do_terminate(connection)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 1131, in do_terminate
+    dbapi_connection.terminate()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/connectors/asyncio.py", line 402, in terminate
+    self.await_(asyncio.shield(self._terminate_graceful_close()))  # type: ignore[attr-defined] # noqa: E501
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 912, in _terminate_graceful_close
+    await self._connection.close(timeout=2)
+  File "/home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/asyncpg/connection.py", line 1513, in close
+    await self._protocol.close(timeout)
+  File "asyncpg/protocol/protocol.pyx", line 618, in close
+    await self.cancel_sent_waiter
+RuntimeError: Task <Task pending name='Task-50' coro=<AsyncAdapt_asyncpg_connection._terminate_graceful_close() running at /home/elsharkawy/Desktop/AginticCustomerSupport/.venv/lib/python3.13/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py:912> cb=[shield.<locals>._inner_done_callback() at /home/elsharkawy/miniconda3/lib/python3.13/asyncio/tasks.py:958]> got Future <Future pending> attached to a different loop
+---------------------------- Captured log teardown -----------------------------
+ERROR    asyncio:base_events.py:1879 Future exception was never retrieved
+future: <Future finished exception=InternalClientError('got result for unknown protocol state 3')>
+Traceback (most recent call last):
+  File "asyncpg/protocol/protocol.pyx", line 892, in asyncpg.protocol.protocol.BaseProtocol._dispatch_result
+    raise apg_exc.InternalClientError(
+asyncpg.exceptions._base.InternalClientError: got result for unknown protocol state 3
+=========================== short test summary info ============================
+FAILED tests/test_rls_integration.py::TestRLSSchema::test_phase1_policies_exist_with_correct_using_clause
+FAILED tests/test_rls_integration.py::TestCrossTenantIsolation::test_tenant_a_cannot_read_tenant_b_conversations
+FAILED tests/test_rls_integration.py::TestCrossTenantIsolation::test_tenant_a_cannot_read_tenant_b_messages
+FAILED tests/test_rls_integration.py::TestCrossTenantIsolation::test_unbound_session_sees_all_rows
+FAILED tests/test_rls_integration.py::TestTransactionLifecycle::test_tenant_binding_survives_commit_and_rollback
+========================= 5 failed, 2 passed in 16.11s =========================

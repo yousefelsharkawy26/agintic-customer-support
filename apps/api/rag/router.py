@@ -6,8 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.api.auth.deps import get_current_tenant, verify_tenant_access
-from apps.api.core.database import get_db
+from apps.api.auth.deps import get_current_tenant, get_tenant_db
 from apps.api.rag.models import IndexedDocument
 from apps.api.rag.pipeline import RAGPipeline
 
@@ -21,7 +20,6 @@ router = APIRouter(
 class DocumentIngestRequest(BaseModel):
     content: str
     source_type: str = "markdown"
-    tenant_id: str = "default"
     source_url: str | None = None
     title: str | None = None
 
@@ -37,27 +35,28 @@ class DocumentResponse(BaseModel):
 @router.post("/ingest")
 async def ingest_document(
     body: DocumentIngestRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_db),
     tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> dict[str, Any]:
-    verify_tenant_access(body.tenant_id, tenant)
+    tenant_id = tenant["tenant_id"]
     pipeline = RAGPipeline()
     chunk_count = await pipeline.index_document(
         db=db,
         text=body.content,
         source_type=body.source_type,
-        tenant_id=body.tenant_id,
+        tenant_id=tenant_id,
         source_url=body.source_url,
         title=body.title,
     )
-    return {"chunks_indexed": chunk_count, "tenant_id": body.tenant_id}
+    return {"chunks_indexed": chunk_count, "tenant_id": tenant_id}
 
 
 @router.get("/")
 async def list_documents(
-    tenant_id: str = "default",
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_db),
+    tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> dict[str, Any]:
+    tenant_id = tenant["tenant_id"]
     result = await db.execute(
         select(IndexedDocument)
         .where(
@@ -85,8 +84,9 @@ async def list_documents(
 @router.delete("/{document_id}")
 async def delete_document(
     document_id: str,
-    tenant_id: str = "default",
+    tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> dict[str, str]:
+    tenant_id = tenant["tenant_id"]
     pipeline = RAGPipeline()
     await pipeline._indexer.delete_document(document_id, tenant_id)
     return {"status": "deleted", "document_id": document_id}

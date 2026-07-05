@@ -17,26 +17,42 @@ class ConversationManager:
         self._cache = ResilientCacheProvider(settings.redis_url)
 
     async def create_conversation(
-        self, db: AsyncSession, tenant_id: str, user_id: str | None = None
+        self,
+        db: AsyncSession,
+        tenant_id: str,
+        user_id: str | None = None,
+        agent_id: str | None = None,
     ) -> Conversation:
-        conv = Conversation(id=str(uuid.uuid4()), tenant_id=tenant_id, user_id=user_id)
+        conv = Conversation(
+            id=str(uuid.uuid4()), tenant_id=tenant_id, user_id=user_id, agent_id=agent_id
+        )
         db.add(conv)
         await db.flush()
         cache_key = self._conv_cache_key(conv.id)
         await self._cache.set(
             cache_key,
-            {"id": conv.id, "tenant_id": tenant_id, "status": "active"},
+            {"id": conv.id, "tenant_id": tenant_id, "status": "active", "agent_id": agent_id},
             ttl=3600,
         )
-        logger.info("conversation_created", conversation_id=conv.id, tenant_id=tenant_id)
+        logger.info(
+            "conversation_created", conversation_id=conv.id, tenant_id=tenant_id, agent_id=agent_id
+        )
         return conv
 
-    async def get_conversation(self, db: AsyncSession, conversation_id: str) -> Conversation | None:
+    async def get_conversation(
+        self, db: AsyncSession, conversation_id: str, tenant_id: str
+    ) -> Conversation | None:
         cache_key = self._conv_cache_key(conversation_id)
         cached = await self._cache.get(cache_key)
         if cached:
+            if cached.get("tenant_id") != tenant_id:
+                return None
             return Conversation(**cached)
-        result = await db.execute(select(Conversation).where(Conversation.id == conversation_id))
+        result = await db.execute(
+            select(Conversation).where(
+                Conversation.id == conversation_id, Conversation.tenant_id == tenant_id
+            )
+        )
         conv = result.scalar_one_or_none()
         if conv:
             await self._cache.set(

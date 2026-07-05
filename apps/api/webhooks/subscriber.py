@@ -31,14 +31,19 @@ async def handle_webhook_event(event: Event) -> None:
         logger.warning("webhook_event_missing_tenant", event_type=event.type)
         return
 
+    from apps.api.core.rls import bind_session_to_tenant
+
     try:
         async with async_session_factory() as db:
+            bind_session_to_tenant(db, tenant_id)
             await fire_event(
                 event_type=webhook_type,
                 tenant_id=tenant_id,
                 data=event.data,
                 db=db,
             )
+            if db.in_transaction():
+                await db.commit()
     except Exception:
         logger.exception(
             "webhook_subscriber_error",

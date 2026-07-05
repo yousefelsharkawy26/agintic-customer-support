@@ -15,6 +15,20 @@ class WebhookConfigCreate(BaseModel):
     retry_count: int = 3
     timeout_ms: int = 10000
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "provider": "slack",
+                "label": "Production Slack",
+                "url": "https://hooks.slack.com/services/T00/B00/xxx",
+                "secret": "whsec_your_signing_secret",
+                "events": ["conversation.created", "ticket.resolved"],
+                "retry_count": 3,
+                "timeout_ms": 10000,
+            }
+        }
+    }
+
 
 class WebhookConfigUpdate(BaseModel):
     label: str | None = None

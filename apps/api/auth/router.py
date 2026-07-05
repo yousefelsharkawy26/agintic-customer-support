@@ -18,18 +18,51 @@ class ApiKeyRequest(BaseModel):
     tenant_id: str
     label: str
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {"tenant_id": "tenant-abc-123", "label": "Production API key"}
+        }
+    }
+
 
 class ApiKeyResponse(BaseModel):
     api_key: str
     tenant_id: str
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "api_key": "csk_live_abc123def456...",
+                "tenant_id": "tenant-abc-123",
+            }
+        }
+    }
 
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                "token_type": "bearer",
+            }
+        }
+    }
 
-@router.post("/api-keys", response_model=ApiKeyResponse)
+
+@router.post(
+    "/api-keys",
+    response_model=ApiKeyResponse,
+    summary="Create a new API key",
+    description=(
+        "Create a new API key for a tenant. The returned key is shown "
+        "ONLY ONCE — store it securely. Use this key to obtain a JWT token "
+        "via `POST /auth/token` or directly as the `X-API-Key` header."
+    ),
+)
 async def create_tenant_api_key(
     body: ApiKeyRequest,
     db: AsyncSession = Depends(get_db),
@@ -46,7 +79,16 @@ async def create_tenant_api_key(
     return ApiKeyResponse(api_key=raw_key, tenant_id=body.tenant_id)
 
 
-@router.post("/token", response_model=TokenResponse)
+@router.post(
+    "/token",
+    response_model=TokenResponse,
+    summary="Exchange API key for JWT token",
+    description=(
+        "Exchange an API key for a short-lived JWT access token. "
+        "Pass the API key as a query parameter: `?api_key=<key>`. "
+        "Use the returned token in the `Authorization: Bearer <token>` header."
+    ),
+)
 async def get_token(
     api_key: str,
     db: AsyncSession = Depends(get_db),

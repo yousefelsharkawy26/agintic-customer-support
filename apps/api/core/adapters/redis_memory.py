@@ -20,7 +20,7 @@ class RedisMemoryProvider(MemoryProvider):
             "role": entry.role.value,
             "content": entry.content,
             "timestamp": entry.timestamp or time.time(),
-            "metadata": json.dumps(entry.metadata),
+            "metadata": entry.metadata,
         }
         await self._redis.rpush(self._key(conversation_id), json.dumps(data))
         await self._redis.expire(self._key(conversation_id), self._ttl)
@@ -35,7 +35,7 @@ class RedisMemoryProvider(MemoryProvider):
                     role=MessageRole(parsed["role"]),
                     content=parsed["content"],
                     timestamp=parsed["timestamp"],
-                    metadata=json.loads(parsed.get("metadata", "{}")),
+                    metadata=parsed.get("metadata", {}),
                 )
             )
         return entries

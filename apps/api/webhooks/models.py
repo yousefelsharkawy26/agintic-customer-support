@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Integer, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from apps.api.tenants.models import Base
@@ -12,8 +12,10 @@ from apps.api.tenants.models import Base
 class WebhookConfig(Base):
     __tablename__ = "webhook_configs"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    id: Mapped[str] = mapped_column(
+        Uuid(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False, index=True)
     provider: Mapped[str] = mapped_column(String(50), nullable=False)
     label: Mapped[str] = mapped_column(String(255), nullable=False)
     url: Mapped[str] = mapped_column(String(1024), nullable=False)
@@ -31,9 +33,11 @@ class WebhookConfig(Base):
 class WebhookDelivery(Base):
     __tablename__ = "webhook_deliveries"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    config_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
-    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    id: Mapped[str] = mapped_column(
+        Uuid(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    config_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False, index=True)
+    tenant_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False, index=True)
     event_type: Mapped[str] = mapped_column(String(100), nullable=False)
     status: Mapped[str] = mapped_column(String(20), default="pending")
     request_body: Mapped[str] = mapped_column(Text, nullable=True)

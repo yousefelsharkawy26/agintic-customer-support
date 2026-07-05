@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from typing import Any, cast
 
 import structlog
@@ -22,13 +21,13 @@ class SemanticCache:
         cached = await self._cache.get(key)
         if cached:
             logger.info("semantic_cache_hit", query=query[:50])
-            return cast("list[dict[str, Any]]", json.loads(cached))
+            return cast("list[dict[str, Any]]", cached)
         logger.info("semantic_cache_miss", query=query[:50])
         return None
 
     async def set(self, query: str, chunks: list[dict[str, Any]]) -> None:
         key = self._make_key(query)
-        await self._cache.set(key, json.dumps(chunks), ttl=self._ttl)
+        await self._cache.set(key, chunks, ttl=self._ttl)
 
     def _make_key(self, query: str) -> str:
         return f"semantic_cache:{hashlib.md5(query.encode()).hexdigest()}"

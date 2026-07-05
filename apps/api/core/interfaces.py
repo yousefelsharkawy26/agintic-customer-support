@@ -164,6 +164,20 @@ class MemoryEntry:
 
 
 class MemoryProvider(ABC):
+    """
+    Abstract memory interface for conversation history.
+
+    SERIALIZATION CONTRACT
+    ----------------------
+    Serialization of MemoryEntry (including nested fields such as metadata)
+    is exclusively the responsibility of the concrete adapter implementation.
+    Callers MUST pass fully-typed MemoryEntry objects with native Python types
+    in all fields. Callers MUST NOT pre-serialize any field (e.g. by calling
+    json.dumps on metadata) before calling add(). The adapter guarantees that
+    get() returns MemoryEntry objects whose fields match the types declared in
+    the MemoryEntry dataclass.
+    """
+
     @abstractmethod
     async def add(self, conversation_id: str, entry: MemoryEntry) -> None: ...
 
@@ -180,6 +194,22 @@ class MemoryProvider(ABC):
 
 
 class CacheProvider(ABC):
+    """
+    Abstract cache interface.
+
+    SERIALIZATION CONTRACT
+    ----------------------
+    Serialization is exclusively the responsibility of the concrete adapter
+    implementation (e.g. RedisCacheProvider). Callers MUST pass native Python
+    objects (dict, list, str, int, float, bool, None). Callers MUST NOT call
+    json.dumps() or any other serializer before calling set(). The adapter
+    guarantees that get() returns the same Python type that was passed to set().
+
+    Violating this contract (pre-serializing before set, or post-deserializing
+    after get) produces double-serialization: a JSON string stored inside a
+    JSON string, requiring an extra json.loads() on read and masking bugs.
+    """
+
     @abstractmethod
     async def get(self, key: str) -> Any | None: ...
 

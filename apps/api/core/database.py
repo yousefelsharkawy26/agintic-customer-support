@@ -3,6 +3,7 @@ from collections.abc import AsyncIterator
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from apps.api.core.config import settings
+from apps.api.core.rls import bind_session_to_tenant
 
 engine = create_async_engine(
     settings.database_url,
@@ -19,7 +20,26 @@ async def get_db() -> AsyncIterator[AsyncSession]:
     async with async_session_factory() as session:
         try:
             yield session
-            await session.commit()
+            if session.in_transaction():
+                await session.commit()
         except Exception:
-            await session.rollback()
+            if session.in_transaction():
+                await session.rollback()
+            raise
+
+
+async def get_system_db() -> AsyncIterator[AsyncSession]:
+    """
+    Cross-tenant session via the system nil UUID.
+    Provides a bound session that cannot read tenant rows.
+    """
+    async with async_session_factory() as session:
+        bind_session_to_tenant(session, "00000000-0000-0000-0000-000000000000")
+        try:
+            yield session
+            if session.in_transaction():
+                await session.commit()
+        except Exception:
+            if session.in_transaction():
+                await session.rollback()
             raise

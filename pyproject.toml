@@ -17,6 +17,7 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "pyjwt>=2.8.0",
     "structlog>=24.0.0",
+    "alembic>=1.13.0",
 ]
 
 [tool.ruff]
@@ -48,7 +49,11 @@ ignore_errors = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+markers = [
+    "integration: marks tests as requiring external services like a live database"
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["apps/api"]

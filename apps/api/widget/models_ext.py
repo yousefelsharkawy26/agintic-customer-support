@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Integer, String, Text, func
+from sqlalchemy import JSON, Boolean, DateTime, Integer, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from apps.api.tenants.models import Base
@@ -12,8 +12,12 @@ from apps.api.tenants.models import Base
 class WidgetSettings(Base):
     __tablename__ = "widget_settings"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    tenant_id: Mapped[str] = mapped_column(String(36), unique=True, nullable=False, index=True)
+    id: Mapped[str] = mapped_column(
+        Uuid(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(
+        Uuid(as_uuid=False), unique=True, nullable=False, index=True
+    )
     primary_color: Mapped[str] = mapped_column(String(7), default="#2563eb")
     position: Mapped[str] = mapped_column(String(20), default="bottom-right")
     title: Mapped[str] = mapped_column(String(100), default="Support")
@@ -33,8 +37,8 @@ class WidgetEvent(Base):
     __tablename__ = "widget_events"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
-    session_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    tenant_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False, index=True)
+    session_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False, index=True)
     visitor_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     event_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     metadata_: Mapped[dict[str, object] | None] = mapped_column("metadata", JSON, nullable=True)

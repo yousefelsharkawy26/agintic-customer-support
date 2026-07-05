@@ -55,11 +55,12 @@ def sign_payload(payload: str, secret: str) -> str:
 
 
 async def list_active_configs(
-    db: AsyncSession, tenant_id: str | None = None, event_type: str | None = None
+    db: AsyncSession, tenant_id: str, event_type: str | None = None
 ) -> list[WebhookConfig]:
-    query = select(WebhookConfig).where(WebhookConfig.is_active.is_(True))
-    if tenant_id:
-        query = query.where(WebhookConfig.tenant_id == tenant_id)
+    query = select(WebhookConfig).where(
+        WebhookConfig.is_active.is_(True),
+        WebhookConfig.tenant_id == tenant_id,
+    )
     if event_type:
         query = query.where(WebhookConfig.events.contains(event_type))
     result = await db.execute(query)

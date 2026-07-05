@@ -97,3 +97,27 @@ def verify_tenant_access(request_tenant_id: str, auth_tenant: dict[str, Any]) ->
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Tenant access denied",
         )
+
+
+from collections.abc import AsyncIterator
+
+from apps.api.core.database import async_session_factory
+from apps.api.core.rls import bind_session_to_tenant
+
+
+async def get_tenant_db(
+    tenant: dict[str, Any] = Depends(get_current_tenant),
+) -> AsyncIterator[AsyncSession]:
+    """Guarantees the session is strictly bound to the authenticated tenant."""
+    async with async_session_factory() as session:
+        tenant_id = tenant["tenant_id"]
+        bind_session_to_tenant(session, tenant_id)
+
+        try:
+            yield session
+            if session.in_transaction():
+                await session.commit()
+        except Exception:
+            if session.in_transaction():
+                await session.rollback()
+            raise

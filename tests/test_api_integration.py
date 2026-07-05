@@ -50,7 +50,7 @@ def mock_db():
 
 @pytest.fixture
 def override_deps(mock_db):
-    from apps.api.auth.deps import get_current_tenant
+    from apps.api.auth.deps import get_current_tenant, get_tenant_db
     from apps.api.core.database import get_db
 
     async def override_get_db() -> AsyncIterator[Any]:
@@ -60,6 +60,7 @@ def override_deps(mock_db):
         return {"tenant_id": "t1", "auth_method": "test"}
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_tenant_db] = override_get_db
     app.dependency_overrides[get_current_tenant] = override_auth
 
     # Patch RAGPipeline to avoid OpenAI/Qdrant initialization
@@ -139,9 +140,56 @@ class TestChatAPI:
             )
             assert resp.status_code == 200
 
+    async def test_chat_unauthorized_tenant(self, client: AsyncClient, mock_db):
+        from apps.api.conversation.models import Conversation
+
+        mock_conv = Conversation(id="conv-t2", tenant_id="t2", status="active")
+
+        async def custom_execute(statement, **_kwargs):
+            stmt_str = str(statement.compile(compile_kwargs={"literal_binds": True}))
+            if "t1" in stmt_str:
+                return type("FakeResult", (), {"scalar_one_or_none": lambda _self: None})()
+            return type(
+                "FakeResult",
+                (),
+                {"scalar_one_or_none": lambda _self: mock_conv},
+            )()
+
+        mock_db.execute = custom_execute
+
+        resp = await client.post(
+            "/api/v1/chat",
+            json={"message": "Hello", "stream": False, "conversation_id": "conv-t2"},
+        )
+        assert resp.status_code == 404
+        assert "Conversation not found" in resp.json()["detail"]
+
     async def test_get_conversation_not_found(self, client: AsyncClient):
         resp = await client.get("/api/v1/conversations/nonexistent-id")
         assert resp.status_code == 404
+
+    async def test_get_conversation_unauthorized_tenant(self, client: AsyncClient, mock_db):
+        from apps.api.conversation.models import Conversation
+
+        # Mock DB to return a conversation belonging to a different tenant ("t2").
+        # The override_deps fixture defaults the current tenant to "t1".
+        mock_conv = Conversation(id="conv-t2", tenant_id="t2", status="active")
+
+        async def custom_execute(statement, **_kwargs):
+            stmt_str = str(statement.compile(compile_kwargs={"literal_binds": True}))
+            if "t1" in stmt_str:
+                return type("FakeResult", (), {"scalar_one_or_none": lambda _self: None})()
+            return type(
+                "FakeResult",
+                (),
+                {"scalar_one_or_none": lambda _self: mock_conv},
+            )()
+
+        mock_db.execute = custom_execute
+
+        resp = await client.get("/api/v1/conversations/conv-t2")
+        assert resp.status_code == 404
+        assert "Conversation not found" in resp.json()["detail"]
 
 
 # ── Tenant API Tests ──
@@ -170,13 +218,13 @@ class TestTenantAPI:
 
         mock_db.execute = custom_execute
 
-        resp = await client.get("/api/v1/tenants/t1/config")
+        resp = await client.get("/api/v1/tenants/config")
         assert resp.status_code == 200
         data = resp.json()
         assert data["llm_model"] == "gpt-4o"
 
     async def test_get_quota(self, client: AsyncClient):
-        resp = await client.get("/api/v1/tenants/t1/quota")
+        resp = await client.get("/api/v1/tenants/quota")
         assert resp.status_code == 200
         data = resp.json()
         assert "within_quota" in data
@@ -254,3 +302,35 @@ class TestWidgetAPI:
     async def test_get_offline_messages(self, client: AsyncClient):
         resp = await client.get("/api/v1/widget/messages/offline/t1/v1")
         assert resp.status_code == 200
+
+
+# ── MCP API Tests ──
+
+
+class TestMCPAPI:
+    async def test_delete_server_unauthorized_tenant(self, client: AsyncClient, mock_db):
+        from apps.api.tools.models import MCPServer
+
+        mock_server = MCPServer(
+            id="server-1",
+            tenant_id="t2",
+            name="test-server",
+            server_url="http://test",
+            transport="http",
+        )
+
+        async def custom_execute(statement, **_kwargs):
+            stmt_str = str(statement.compile(compile_kwargs={"literal_binds": True}))
+            if "t1" in stmt_str:
+                return type("FakeResult", (), {"scalar_one_or_none": lambda _self: None})()
+            return type(
+                "FakeResult",
+                (),
+                {"scalar_one_or_none": lambda _self: mock_server},
+            )()
+
+        mock_db.execute = custom_execute
+
+        resp = await client.delete("/api/v1/tools/servers/server-1")
+        assert resp.status_code == 404
+        assert "Server not found" in resp.json()["detail"]

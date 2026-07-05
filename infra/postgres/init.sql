@@ -1,5 +1,16 @@
 -- Customer Support Platform - Database Schema
 -- Applied automatically on first container start
+--
+-- DOCKER FAST BOOT vs PRODUCTION SCHEMA (TECHNICAL DEBT)
+-- ======================================================
+-- This init.sql file is acceptable for local Docker fast boot in this PR,
+-- but it represents temporary technical debt. The long-term goal is a SINGLE
+-- SOURCE OF TRUTH for the database schema.
+--
+-- In a future migration, Docker should migrate to using:
+--      alembic upgrade head
+--
+-- Do NOT allow this schema definition and the Alembic migrations to diverge again!
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
@@ -34,13 +45,38 @@ CREATE INDEX IF NOT EXISTS idx_tenant_api_keys_tenant ON tenant_api_keys(tenant_
 
 -- Row-Level Security
 ALTER TABLE tenants ENABLE ROW LEVEL SECURITY;
-ALTER TABLE tenant_api_keys ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tenants FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE conversations FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE mcp_servers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mcp_servers FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE webhook_configs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE webhook_configs FORCE ROW LEVEL SECURITY;
+
 
 -- Tenant isolation policies
 CREATE POLICY tenant_isolation ON tenants
     FOR ALL
     USING (id = current_setting('app.tenant_id', TRUE)::UUID);
 
-CREATE POLICY tenant_api_key_isolation ON tenant_api_keys
+CREATE POLICY conversation_isolation ON conversations
+    FOR ALL
+    USING (tenant_id = current_setting('app.tenant_id', TRUE)::UUID);
+
+CREATE POLICY message_isolation ON messages
+    FOR ALL
+    USING (tenant_id = current_setting('app.tenant_id', TRUE)::UUID);
+
+CREATE POLICY mcp_server_isolation ON mcp_servers
+    FOR ALL
+    USING (tenant_id = current_setting('app.tenant_id', TRUE)::UUID);
+
+CREATE POLICY webhook_config_isolation ON webhook_configs
     FOR ALL
     USING (tenant_id = current_setting('app.tenant_id', TRUE)::UUID);

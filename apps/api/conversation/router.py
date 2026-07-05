@@ -11,10 +11,10 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.agent.interfaces import AgentContext
+from apps.api.agent.models import AgentModel
 from apps.api.agent.pipeline import AgentPipeline
-from apps.api.auth.deps import get_current_tenant, verify_tenant_access
+from apps.api.auth.deps import get_current_tenant, get_tenant_db
 from apps.api.conversation.manager import ConversationManager
-from apps.api.core.database import get_db
 from apps.api.core.interfaces import LLMConfig, LLMMessage, LLMProvider, MessageRole
 from apps.api.guardrails.guardrails import run_input_guardrails, run_output_guardrails
 from apps.api.models.router import ModelRouter
@@ -38,10 +38,21 @@ def _get_pipeline() -> AgentPipeline:
 
 class ChatRequest(BaseModel):
     conversation_id: str | None = None
+    agent_id: str | None = None
     message: str
     stream: bool = True
-    tenant_id: str | None = None
     user_id: str | None = None
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "message": "How do I reset my password?",
+                "agent_id": "agt_abc123",
+                "stream": True,
+                "user_id": "user-123",
+            }
+        }
+    }
 
 
 class ChatResponse(BaseModel):
@@ -50,13 +61,51 @@ class ChatResponse(BaseModel):
     model: str
     citations: list[str] = []
 
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "conversation_id": "conv-abc-123",
+                "message": "To reset your password, go to Settings > Security...",
+                "model": "gpt-4o",
+                "citations": ["doc-password-reset.pdf"],
+            }
+        }
+    }
 
-@router.post("/chat", response_model=None)
+
+@router.post(
+    "/chat",
+    response_model=None,
+    summary="Send a message to the AI assistant",
+    description=(
+        "Send a message and receive a streaming or non-streaming response.\n\n"
+        "**Streaming** (`stream: true`): Returns Server-Sent Events with "
+        "tokens as they're generated. Event types:\n"
+        '- `data: {"type": "token", "content": "..."}`\n'
+        '- `data: {"type": "done", "conversation_id": "...", "citations": [...]}`\n\n'
+        "**Non-streaming** (`stream: false`): Returns the full response as JSON."
+    ),
+    responses={
+        200: {
+            "description": "Streaming response (SSE) or JSON response",
+            "content": {
+                "text/event-stream": {
+                    "example": (
+                        'data: {"type": "token", "content": "To "}\n\n'
+                        'data: {"type": "token", "content": "reset "}\n\n'
+                        'data: {"type": "done", "conversation_id": "conv-abc-123", "citations": []}\n\n'
+                    )
+                }
+            },
+        }
+    },
+)
 async def chat(
     body: ChatRequest,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_db),
     tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> StreamingResponse | ChatResponse:
+    tenant_id = tenant["tenant_id"]
     guardrail_result = run_input_guardrails(body.message)
     if not guardrail_result.passed:
         return ChatResponse(
@@ -66,17 +115,32 @@ async def chat(
         )
     sanitized = guardrail_result.sanitized_input or body.message
 
+    # ------------------------------------------------------------------
+    # Resolve the Agent configuration
+    # ------------------------------------------------------------------
+    agent_config: AgentModel | None = None
+    if body.agent_id:
+        from sqlalchemy import select
+
+        agent_result = await db.execute(
+            select(AgentModel).where(
+                AgentModel.id == body.agent_id,
+                AgentModel.tenant_id == tenant_id,
+            )
+        )
+        agent_config = agent_result.scalar_one_or_none()
+        if not agent_config:
+            raise HTTPException(status_code=404, detail="Agent not found")
+
     mgr = ConversationManager()
     rag = RAGPipeline()
-    tenant_id = body.tenant_id or tenant["tenant_id"]
-    verify_tenant_access(tenant_id, tenant)
 
     if body.conversation_id:
-        conv = await mgr.get_conversation(db, body.conversation_id)
+        conv = await mgr.get_conversation(db, body.conversation_id, tenant_id)
         if not conv:
             raise HTTPException(status_code=404, detail="Conversation not found")
     else:
-        conv = await mgr.create_conversation(db, tenant_id, body.user_id)
+        conv = await mgr.create_conversation(db, tenant_id, body.user_id, agent_id=body.agent_id)
 
     await mgr.add_message(db, conv.id, MessageRole.USER, sanitized)
 
@@ -178,21 +242,69 @@ async def _stream_response(
         }\n\n"
 
 
-@router.get("/conversations/{conversation_id}")
+@router.get(
+    "/conversations",
+    summary="List conversations",
+)
+async def list_conversations(
+    limit: int = 50,
+    db: AsyncSession = Depends(get_tenant_db),
+    tenant: dict[str, Any] = Depends(get_current_tenant),
+) -> list[dict[str, Any]]:
+    tenant_id = tenant["tenant_id"]
+    from sqlalchemy import select
+
+    from apps.api.conversation.models import Conversation
+
+    result = await db.execute(
+        select(Conversation)
+        .where(Conversation.tenant_id == tenant_id)
+        .order_by(Conversation.created_at.desc())
+        .limit(limit)
+    )
+    convs = result.scalars().all()
+    return [
+        {
+            "id": c.id,
+            "status": c.status,
+            "created_at": c.created_at.isoformat(),
+            "customer_name": "Customer",  # Mock for now
+            "customer_email": "customer@example.com",
+            "messages_count": 0,
+            "agent_id": "system",
+        }
+        for c in convs
+    ]
+
+
+@router.get(
+    "/conversations/{conversation_id}",
+    summary="Get conversation history",
+    description=(
+        "Retrieve the full message history of a conversation, including "
+        "user messages, assistant responses, models used, and timestamps."
+    ),
+)
 async def get_conversation(
     conversation_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_db),
+    tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> dict[str, Any]:
     mgr = ConversationManager()
-    conv = await mgr.get_conversation(db, conversation_id)
+    conv = await mgr.get_conversation(db, conversation_id, tenant["tenant_id"])
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
     messages = await mgr.get_messages(db, conversation_id)
     return {
         "conversation_id": conv.id,
         "status": conv.status,
+        "customer_name": "Customer",
+        "customer_email": "customer@example.com",
+        "messages_count": len(messages),
+        "agent_id": "system",
         "messages": [
             {
+                "id": str(m.id),
                 "role": m.role,
                 "content": m.content,
                 "model": m.model,

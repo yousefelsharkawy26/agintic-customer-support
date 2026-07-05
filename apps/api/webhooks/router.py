@@ -9,8 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import apps.api.webhooks.models  # noqa: F401
-from apps.api.auth.deps import get_current_tenant
-from apps.api.core.database import get_db
+from apps.api.auth.deps import get_current_tenant, get_tenant_db
 from apps.api.webhooks.engine import (
     PROVIDER_EVENTS,
     SUPPORTED_EVENTS,
@@ -73,10 +72,21 @@ async def list_events() -> list[dict[str, str]]:
     return [{"event": e, "description": _event_description(e)} for e in sorted(SUPPORTED_EVENTS)]
 
 
-@router.post("/configs", status_code=201)
+@router.post(
+    "/configs",
+    status_code=201,
+    summary="Create a new webhook configuration",
+    description=(
+        "Create a webhook to deliver events to an external system "
+        "(Slack, Zendesk, Intercom, HubSpot). The `secret` is used to "
+        "sign deliveries with HMAC-SHA256 (sent in `X-Signature-256` header). "
+        "Events are retried up to `retry_count` times with exponential "
+        "backoff (max 30s between attempts)."
+    ),
+)
 async def create_webhook_config(
     body: WebhookConfigCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_db),
     tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> WebhookConfigResponse:
     if body.provider not in SUPPORTED_PROVIDERS:
@@ -122,10 +132,17 @@ async def create_webhook_config(
     return _config_to_response(config)
 
 
-@router.get("/configs")
+@router.get(
+    "/configs",
+    summary="List all webhook configurations",
+    description=(
+        "List all webhook configurations for the authenticated tenant. "
+        "Optionally filter by provider."
+    ),
+)
 async def list_webhook_configs(
     provider: str | None = Query(None),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_db),
     tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> list[WebhookConfigResponse]:
     query = select(WebhookConfig).where(WebhookConfig.tenant_id == tenant["tenant_id"])
@@ -135,21 +152,28 @@ async def list_webhook_configs(
     return [_config_to_response(c) for c in result.scalars().all()]
 
 
-@router.get("/configs/{config_id}")
+@router.get(
+    "/configs/{config_id}",
+    summary="Get a specific webhook configuration",
+)
 async def get_webhook_config(
     config_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_db),
     tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> WebhookConfigResponse:
     config = await _get_config(db, config_id, tenant["tenant_id"])
     return _config_to_response(config)
 
 
-@router.put("/configs/{config_id}")
+@router.put(
+    "/configs/{config_id}",
+    summary="Update a webhook configuration",
+    description="Partially update a webhook configuration. Only provided fields are updated.",
+)
 async def update_webhook_config(
     config_id: str,
     body: WebhookConfigUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_db),
     tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> WebhookConfigResponse:
     config = await _get_config(db, config_id, tenant["tenant_id"])
@@ -173,10 +197,13 @@ async def update_webhook_config(
     return _config_to_response(config)
 
 
-@router.delete("/configs/{config_id}")
+@router.delete(
+    "/configs/{config_id}",
+    summary="Delete a webhook configuration",
+)
 async def delete_webhook_config(
     config_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_db),
     tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> dict[str, bool]:
     config = await _get_config(db, config_id, tenant["tenant_id"])
@@ -189,7 +216,7 @@ async def delete_webhook_config(
 async def list_deliveries(
     config_id: str | None = Query(None),
     limit: int = Query(50, le=200),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_db),
     tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> list[WebhookDeliveryResponse]:
     query = (
@@ -220,7 +247,7 @@ async def list_deliveries(
 @router.post("/test")
 async def test_webhook(
     config_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_db),
     tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> dict[str, Any]:
     await _get_config(db, config_id, tenant["tenant_id"])

@@ -2,9 +2,13 @@
   "name": "customer-support-platform",
   "private": true,
   "scripts": {
-    "lint": "eslint 'packages/*/src/**/*.ts' 'apps/*/src/**/*.ts'",
-    "format": "prettier --write 'packages/*/src/**/*.ts' 'apps/*/src/**/*.ts'",
-    "typecheck": "tsc --noEmit"
+    "lint": "pnpm -w -r --if-present run lint",
+    "format": "pnpm -w -r --if-present run format:check",
+    "typecheck": "pnpm -w -r --if-present run typecheck",
+    "lint:dashboard": "pnpm -F dashboard run lint",
+    "format:dashboard": "pnpm -F dashboard run format --check && pnpm -F dashboard run format",
+    "typecheck:dashboard": "pnpm -F dashboard run typecheck",
+    "build:dashboard": "pnpm -F dashboard run build"
   },
   "devDependencies": {
     "typescript": "^5.5.0",

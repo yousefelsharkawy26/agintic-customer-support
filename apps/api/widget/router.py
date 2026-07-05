@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.api.auth.deps import get_current_tenant
+from apps.api.auth.deps import get_current_tenant, get_tenant_db
 from apps.api.core.database import get_db
 from apps.api.widget.models import OfflineMessage, WidgetSession
 from apps.api.widget.models_ext import WidgetEvent, WidgetSettings
@@ -252,7 +252,7 @@ async def get_widget_settings(tenant_id: str, db: AsyncSession = Depends(get_db)
 async def update_widget_settings(
     tenant_id: str,
     body: WidgetSettingsUpdate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_db),
     tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> dict[str, Any]:
     if tenant["tenant_id"] != tenant_id:
@@ -309,7 +309,7 @@ async def record_analytics_event(
 @router.get("/analytics/{tenant_id}")
 async def get_widget_analytics(
     tenant_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_db),
     tenant: dict[str, Any] = Depends(get_current_tenant),
     event_type: str | None = Query(None),
     since: str | None = Query(None),
@@ -358,7 +358,7 @@ async def get_widget_analytics(
 @router.get("/analytics/{tenant_id}/satisfaction")
 async def get_satisfaction_summary(
     tenant_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_db),
     tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> dict[str, Any]:
     if tenant["tenant_id"] != tenant_id:
@@ -392,3 +392,21 @@ async def get_satisfaction_summary(
         "average": round(total_score / len(ratings), 2),
         "distribution": distribution,
     }
+
+
+@router.get("/dashboard/stats")
+async def get_dashboard_stats(
+    db: AsyncSession = Depends(get_tenant_db),
+    tenant: dict[str, Any] = Depends(get_current_tenant),
+) -> dict[str, Any]:
+    """Get widget usage statistics and analytics"""
+    pass
+
+
+@router.get("/dashboard/engagement")
+async def get_dashboard_engagement(
+    db: AsyncSession = Depends(get_tenant_db),
+    tenant: dict[str, Any] = Depends(get_current_tenant),
+) -> list[dict[str, Any]]:
+    """Get user sessions and interactions"""
+    pass

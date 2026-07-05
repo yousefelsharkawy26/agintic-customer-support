@@ -10,9 +10,13 @@ class Settings(BaseSettings):
     app_name: str = "Customer Support API"
     debug: bool = False
 
-    database_url: str = (
-        "postgresql+asyncpg://cs_user:cs_dev_password@localhost:5432/customer_support"
-    )
+    database_url: str = "postgresql+asyncpg://app_worker:CHANGE_ME@localhost:5432/customer_support"
+    # Used by Alembic migrations only (neondb_owner / superuser).
+    # NEVER read by the FastAPI application at runtime.
+    alembic_database_url: str | None = None
+    # Used by the out-of-band provisioning CLI only (app_provisioner role).
+    # NEVER read by the FastAPI application at runtime.
+    provisioner_database_url: str | None = None
     redis_url: str = "redis://localhost:6379/0"
     qdrant_url: str = "http://localhost:6333"
 

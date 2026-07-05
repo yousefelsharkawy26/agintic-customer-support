@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Integer, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from apps.api.tenants.models import Base
@@ -10,8 +10,10 @@ from apps.api.tenants.models import Base
 class MCPServer(Base):
     __tablename__ = "mcp_servers"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    id: Mapped[str] = mapped_column(
+        Uuid(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     server_url: Mapped[str] = mapped_column(String(1024), nullable=False)
     api_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
@@ -28,9 +30,11 @@ class MCPServer(Base):
 class ToolAuditLog(Base):
     __tablename__ = "tool_audit_log"
 
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    tenant_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
-    conversation_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    id: Mapped[str] = mapped_column(
+        Uuid(as_uuid=False), primary_key=True, default=lambda: str(uuid.uuid4())
+    )
+    tenant_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False, index=True)
+    conversation_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), nullable=False, index=True)
     tool_name: Mapped[str] = mapped_column(String(255), nullable=False)
     arguments: Mapped[str] = mapped_column(Text, nullable=True)
     result: Mapped[str] = mapped_column(Text, nullable=True)

@@ -3,13 +3,12 @@ from __future__ import annotations
 from typing import Any
 
 import structlog
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.api.auth.deps import get_current_tenant, verify_tenant_access
-from apps.api.core.database import get_db
+from apps.api.auth.deps import get_current_tenant, get_tenant_db
 from apps.api.tools.models import MCPServer
 
 logger = structlog.get_logger()
@@ -20,7 +19,6 @@ router = APIRouter(
 
 
 class MCPServerCreate(BaseModel):
-    tenant_id: str
     name: str
     server_url: str
     api_key: str | None = None
@@ -42,12 +40,12 @@ class MCPServerResponse(BaseModel):
 @router.post("")
 async def register_server(
     body: MCPServerCreate,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_db),
     tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> dict[str, str]:
-    verify_tenant_access(body.tenant_id, tenant)
+    tenant_id = tenant["tenant_id"]
     server = MCPServer(
-        tenant_id=body.tenant_id,
+        tenant_id=tenant_id,
         name=body.name,
         server_url=body.server_url,
         api_key=body.api_key,
@@ -55,17 +53,16 @@ async def register_server(
         timeout_ms=body.timeout_ms,
     )
     db.add(server)
-    logger.info("mcp_server_registered", name=body.name, tenant_id=body.tenant_id)
+    logger.info("mcp_server_registered", name=body.name, tenant_id=tenant_id)
     return {"id": server.id}
 
 
 @router.get("")
 async def list_servers(
-    tenant_id: str,
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_tenant_db),
     tenant: dict[str, Any] = Depends(get_current_tenant),
 ) -> list[MCPServerResponse]:
-    verify_tenant_access(tenant_id, tenant)
+    tenant_id = tenant["tenant_id"]
     result = await db.execute(
         select(MCPServer).where(MCPServer.tenant_id == tenant_id, MCPServer.is_active.is_(True))
     )
@@ -85,10 +82,19 @@ async def list_servers(
 
 
 @router.delete("/{server_id}")
-async def delete_server(server_id: str, db: AsyncSession = Depends(get_db)) -> dict[str, bool]:
-    result = await db.execute(select(MCPServer).where(MCPServer.id == server_id))
+async def delete_server(
+    server_id: str,
+    db: AsyncSession = Depends(get_tenant_db),
+    tenant: dict[str, Any] = Depends(get_current_tenant),
+) -> dict[str, bool]:
+    tenant_id = tenant["tenant_id"]
+    result = await db.execute(
+        select(MCPServer).where(MCPServer.id == server_id, MCPServer.tenant_id == tenant_id)
+    )
     server = result.scalar_one_or_none()
-    if server:
-        server.is_active = False
-        logger.info("mcp_server_deactivated", server_id=server_id)
-    return {"deleted": server is not None}
+    if not server:
+        raise HTTPException(status_code=404, detail="Server not found")
+
+    server.is_active = False
+    logger.info("mcp_server_deactivated", server_id=server_id, tenant_id=tenant_id)
+    return {"deleted": True}
